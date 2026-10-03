@@ -60,8 +60,8 @@ function dueChip(due) {
   if (!due) return null;
   const t = todayStr();
   if (due < t) return h('span', { class: 'chip late' }, 'Gecikti · ' + fmtDate(due));
-  if (due === t) return h('span', { class: 'chip today' }, 'Bugün');
-  if (due === addDays(1)) return h('span', { class: 'chip' }, 'Yarın');
+  if (due === t) return h('span', { class: 'chip today' }, _t('Bugün'));
+  if (due === addDays(1)) return h('span', { class: 'chip' }, _t('Yarın'));
   return h('span', { class: 'chip' }, '📅 ' + fmtDate(due));
 }
 

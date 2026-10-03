@@ -3,10 +3,10 @@
 
 // ---------- takvim ----------
 const TYPE_META = {
-  task: { label: 'Görev', cls: 't-task' },
-  note: { label: 'Not', cls: 't-note' },
-  password: { label: 'Şifre', cls: 't-pass' },
-  project: { label: 'Proje', cls: 't-proj' },
+  task: { label: _t('Görev'), cls: 't-task' },
+  note: { label: _t('Not'), cls: 't-note' },
+  password: { label: _t('Şifre'), cls: 't-pass' },
+  project: { label: _t('Proje'), cls: 't-proj' },
 };
 
 let selectedDay = null;
@@ -24,7 +24,7 @@ try {
 
 const dayOf = (ms) => (ms ? localDate(new Date(ms)) : '');
 
-const fmtDayLong = (day) => new Date(day + 'T00:00').toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const fmtDayLong = (day) => new Date(day + 'T00:00').toLocaleDateString(KasaI18n.locale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
 // Gün → o güne düşen kayıtlar. Görev: son tarih ve tamamlandığı gün.
 // Not, şifre: oluşturulduğu ve değiştiği gün. Proje: oluşturulduğu gün.
@@ -88,12 +88,12 @@ function renderCalendar() {
   const m = calMonth.getMonth();
   const today = todayStr();
   const head = h('div', { class: 'cal-head' },
-    h('button', { class: 'icon-btn', type: 'button', title: 'Önceki ay', onclick: () => shiftMonth(-1) }, '‹'),
-    h('div', { class: 'cal-title' }, calMonth.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' })),
-    h('button', { class: 'icon-btn', type: 'button', title: 'Sonraki ay', onclick: () => shiftMonth(1) }, '›'),
+    h('button', { class: 'icon-btn', type: 'button', title: _t('Önceki ay'), onclick: () => shiftMonth(-1) }, '‹'),
+    h('div', { class: 'cal-title' }, calMonth.toLocaleDateString(KasaI18n.locale(), { month: 'long', year: 'numeric' })),
+    h('button', { class: 'icon-btn', type: 'button', title: _t('Sonraki ay'), onclick: () => shiftMonth(1) }, '›'),
     h('span', { class: 'spacer' }),
-    h('button', { class: 'mini', type: 'button', onclick: () => selectDay(today) }, 'Bugün'),
-    h('button', { class: 'icon-btn', type: 'button', title: calCollapsed ? 'Takvimi aç' : 'Takvimi küçült', onclick: toggleCalendar },
+    h('button', { class: 'mini', type: 'button', onclick: () => selectDay(today) }, _t('Bugün')),
+    h('button', { class: 'icon-btn', type: 'button', title: calCollapsed ? _t('Takvimi aç') : _t('Takvimi küçült'), onclick: toggleCalendar },
       calCollapsed ? '▴' : '▾'));
   if (calCollapsed) { cal.replaceChildren(head); return; }
 
@@ -101,7 +101,7 @@ function renderCalendar() {
   const legend = h('div', { class: 'cal-legend' },
     ...Object.values(TYPE_META).map((t) => h('span', { class: t.cls }, h('i'), t.label)));
   const grid = h('div', { class: 'cal-grid' },
-    ...['Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct', 'Pz'].map((d) => h('div', { class: 'cal-dow' }, d)));
+    ...[_t('Pt'), _t('Sa'), _t('Ça'), _t('Pe'), _t('Cu'), _t('Ct'), _t('Pz')].map((d) => h('div', { class: 'cal-dow' }, d)));
   const offset = (new Date(y, m, 1).getDay() + 6) % 7; // hafta pazartesi başlar
   for (let i = 0; i < 42; i++) {
     const d = new Date(y, m, 1 - offset + i);
@@ -129,22 +129,22 @@ function renderDay(c) {
   const e = dayIndex().get(selectedDay);
   const list = (k) => (e ? [...e[k]] : []);
   c.append(h('div', { class: 'project-head' },
-    h('button', { class: 'icon-btn', title: 'Gün görünümünü kapat', onclick: () => selectDay(null) }, '←'),
+    h('button', { class: 'icon-btn', title: _t('Gün görünümünü kapat'), onclick: () => selectDay(null) }, '←'),
     h('h3', null, '📅 ' + fmtDayLong(selectedDay))));
-  c.append(quickAdd('＋ Bu güne görev ekle… (Enter)', selectedDay));
+  c.append(quickAdd(_t('＋ Bu güne görev ekle… (Enter)'), selectedDay));
 
   const tasks = list('task');
   const due = tasks.filter((t) => t.due === selectedDay).sort(byDue);
   const doneThatDay = tasks.filter((t) => t.due !== selectedDay);
-  if (due.length) c.append(section('Son tarihi bu gün', due.length), ...due.map((t) => taskRow(t)));
-  if (doneThatDay.length) c.append(section('Bu gün tamamlanan', doneThatDay.length), ...doneThatDay.map((t) => taskRow(t)));
+  if (due.length) c.append(section(_t('Son tarihi bu gün'), due.length), ...due.map((t) => taskRow(t)));
+  if (doneThatDay.length) c.append(section(_t('Bu gün tamamlanan'), doneThatDay.length), ...doneThatDay.map((t) => taskRow(t)));
   const notes = list('note');
-  if (notes.length) c.append(section('Notlar · eklenen / değişen', notes.length), ...notes.map((n) => noteRow(n)));
+  if (notes.length) c.append(section(_t('Notlar · eklenen / değişen'), notes.length), ...notes.map((n) => noteRow(n)));
   const pws = list('password');
-  if (pws.length) c.append(section('Şifreler · eklenen / değişen', pws.length), ...pws.map((p) => passwordRow(p)));
+  if (pws.length) c.append(section(_t('Şifreler · eklenen / değişen'), pws.length), ...pws.map((p) => passwordRow(p)));
   const projects = list('project');
-  if (projects.length) c.append(section('Bu gün açılan projeler', projects.length), ...projects.map(projectRow));
-  if (!e) c.append(empty('📅', 'Bu günde kayıt yok. Yukarıdan görev ekleyebilirsin.'));
+  if (projects.length) c.append(section(_t('Bu gün açılan projeler'), projects.length), ...projects.map(projectRow));
+  if (!e) c.append(empty('📅', _t('Bu günde kayıt yok. Yukarıdan görev ekleyebilirsin.')));
 }
 
 // Liste ile takvim arasındaki çizgiyi sürükleyerek boyutlandır; çift tıkla takvimi küçült/aç

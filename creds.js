@@ -18,7 +18,7 @@ function findLooseCreds(item) {
   const ignored = new Set(item.credIgnored || []);
   return K.detectCredentials(text)
     .map((e) => ({
-      title: e.title || K.hostOf(e.site) || item.title || 'Not içinden',
+      title: e.title || K.hostOf(e.site) || item.title || _t('Not içinden'),
       url: e.site, username: e.username, password: e.password,
       fp: K.fingerprint(e.username, e.password),
     }))
@@ -31,12 +31,12 @@ function offerLooseCreds(item) {
   addPrompt({
     key: 'loose:' + item.id,
     icon: '🔑',
-    title: `“${item.title || 'Not'}” içinde ${found.length} giriş bilgisi buldum`,
-    sub: found.map((e) => e.title + (e.username ? ' · ' + e.username : '')).join(', ') + ' — Şifrelere kaydedilsin mi?',
+    title: _t("“{0}” içinde {1} giriş bilgisi buldum", item.title || 'Not', found.length),
+    sub: found.map((e) => e.title + (e.username ? ' · ' + e.username : '')).join(', ') + _t(' — Şifrelere kaydedilsin mi?'),
     actions: [
-      { label: 'Kaydet', primary: true, fn: () => importLoose(item, found, false) },
-      { label: 'Kaydet + nottan gizle', fn: () => importLoose(item, found, true) },
-      { label: 'Göz ardı et', fn: () => ignoreLoose(item, found) },
+      { label: _t('Kaydet'), primary: true, fn: () => importLoose(item, found, false) },
+      { label: _t('Kaydet + nottan gizle'), fn: () => importLoose(item, found, true) },
+      { label: _t('Göz ardı et'), fn: () => ignoreLoose(item, found) },
     ],
   });
 }
@@ -53,7 +53,7 @@ function importLoose(item, found, hide) {
     } else if (r.kind === 'new') {
       db.passwords.push(newItem('password', {
         title: e.title, username: e.username, password: e.password, url: e.url,
-        projectId: item.projectId || '', note: `“${item.title || 'Not'}” notundan aktarıldı.`,
+        projectId: item.projectId || '', note: _t("“{0}” notundan aktarıldı.", item.title || 'Not'),
       }));
       added++;
     }
@@ -62,7 +62,7 @@ function importLoose(item, found, hide) {
   if (hide) item.updated = Date.now();
   persist();
   render();
-  toast(`${added} yeni şifre kaydedildi${updated ? `, ${updated} güncellendi` : ''}`);
+  toast(_t("{0} yeni şifre kaydedildi{1}", added, updated ? `, ${updated} güncellendi` : ''));
 }
 
 function ignoreLoose(item, found) {
@@ -85,14 +85,14 @@ function handleCapture(c) {
     addPrompt({
       key: 'cap:' + K.accountKey(r.existing),
       icon: '🔄',
-      title: `${host} şifresi değişmiş görünüyor`,
-      sub: `${c.username || '(kullanıcı adı yok)'} · Kayıtlı şifre yenisiyle güncellensin mi?`,
+      title: _t("{0} şifresi değişmiş görünüyor", host),
+      sub: _t("{0} · Kayıtlı şifre yenisiyle güncellensin mi?", c.username || '(kullanıcı adı yok)'),
       actions: [
-        { label: 'Güncelle', primary: true, fn: () => {
+        { label: _t('Güncelle'), primary: true, fn: () => {
           setPassword(r.existing, c.password);
-          persist(); render(); toast('Şifre güncellendi');
+          persist(); render(); toast(_t('Şifre güncellendi'));
         } },
-        { label: 'Hayır' },
+        { label: _t('Hayır') },
       ],
     });
     return;
@@ -102,15 +102,15 @@ function handleCapture(c) {
   addPrompt({
     key: 'cap:' + host + '|' + K.lower(c.username),
     icon: '🌐',
-    title: `${host} için giriş kaydedilsin mi?`,
-    sub: c.username || '(kullanıcı adı yok)',
+    title: _t("{0} için giriş kaydedilsin mi?", host),
+    sub: c.username || _t('(kullanıcı adı yok)'),
     actions: [
-      { label: 'Kaydet', primary: true, fn: () => {
+      { label: _t('Kaydet'), primary: true, fn: () => {
         db.passwords.push(newItem('password', fields));
-        persist(); render(); toast('Şifre kaydedildi');
+        persist(); render(); toast(_t('Şifre kaydedildi'));
       } },
-      { label: 'Düzenle', fn: () => openEditor('password', null, fields) },
-      { label: 'Hayır' },
+      { label: _t('Düzenle'), fn: () => openEditor('password', null, fields) },
+      { label: _t('Hayır') },
     ],
   });
 }
@@ -118,5 +118,5 @@ function handleCapture(c) {
 kasa.onCapture((x) => handleCapture(x));
 
 kasa.onCapturePending((n) => {
-  if (!db) $('#lockHint').textContent = `Tarayıcıdan ${n} yeni giriş bekliyor. Kaydetmek için kilidi aç.`;
+  if (!db) $('#lockHint').textContent = _t("Tarayıcıdan {0} yeni giriş bekliyor. Kaydetmek için kilidi aç.", n);
 });

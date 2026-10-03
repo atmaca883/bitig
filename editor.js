@@ -3,39 +3,39 @@
 
 const FORMS = {
   task: {
-    titles: ['Yeni görev', 'Görev'],
+    titles: [_t('Yeni görev'), _t('Görev')],
     fields: [
-      { k: 'title', label: 'Görev', type: 'text', req: true, ph: 'Ne yapılacak?' },
-      { k: 'due', label: 'Son tarih', type: 'date' },
-      { k: 'remindAt', label: 'Hatırlat', type: 'datetime-local' },
-      { k: 'projectId', label: 'Proje', type: 'project' },
-      { k: 'note', label: 'Not', type: 'textarea' },
+      { k: 'title', label: _t('Görev'), type: 'text', req: true, ph: _t('Ne yapılacak?') },
+      { k: 'due', label: _t('Son tarih'), type: 'date' },
+      { k: 'remindAt', label: _t('Hatırlat'), type: 'datetime-local' },
+      { k: 'projectId', label: _t('Proje'), type: 'project' },
+      { k: 'note', label: _t('Not'), type: 'textarea' },
     ],
   },
   password: {
-    titles: ['Yeni şifre', 'Şifre'],
+    titles: [_t('Yeni şifre'), _t('Şifre')],
     fields: [
-      { k: 'title', label: 'Başlık', type: 'text', req: true, ph: 'Örn. Hosting paneli' },
-      { k: 'username', label: 'Kullanıcı adı / e-posta', type: 'text' },
-      { k: 'password', label: 'Şifre', type: 'secret' },
-      { k: 'url', label: 'Adres', type: 'text', ph: 'https://' },
-      { k: 'projectId', label: 'Proje', type: 'project' },
-      { k: 'note', label: 'Not', type: 'textarea' },
+      { k: 'title', label: _t('Başlık'), type: 'text', req: true, ph: _t('Örn. Hosting paneli') },
+      { k: 'username', label: _t('Kullanıcı adı / e-posta'), type: 'text' },
+      { k: 'password', label: _t('Şifre'), type: 'secret' },
+      { k: 'url', label: _t('Adres'), type: 'text', ph: 'https://' },
+      { k: 'projectId', label: _t('Proje'), type: 'project' },
+      { k: 'note', label: _t('Not'), type: 'textarea' },
     ],
   },
   note: {
-    titles: ['Yeni not', 'Not'],
+    titles: [_t('Yeni not'), _t('Not')],
     fields: [
-      { k: 'title', label: 'Başlık', type: 'text', ph: 'Başlık' },
-      { k: 'body', label: 'İçerik', type: 'textarea', grow: true },
-      { k: 'projectId', label: 'Proje', type: 'project' },
+      { k: 'title', label: _t('Başlık'), type: 'text', ph: _t('Başlık') },
+      { k: 'body', label: _t('İçerik'), type: 'textarea', grow: true },
+      { k: 'projectId', label: _t('Proje'), type: 'project' },
     ],
   },
   project: {
-    titles: ['Yeni proje', 'Proje'],
+    titles: [_t('Yeni proje'), _t('Proje')],
     fields: [
-      { k: 'name', label: 'Proje adı', type: 'text', req: true, ph: 'Örn. Web sitesi' },
-      { k: 'color', label: 'Renk', type: 'color' },
+      { k: 'name', label: _t('Proje adı'), type: 'text', req: true, ph: _t('Örn. Web sitesi') },
+      { k: 'color', label: _t('Renk'), type: 'color' },
     ],
   },
 };
@@ -49,7 +49,7 @@ function buildField(f, value) {
     label.append(input);
   } else if (f.type === 'project') {
     input = h('select', { 'data-k': f.k },
-      h('option', { value: '' }, '— Projesiz —'),
+      h('option', { value: '' }, _t('— Projesiz —')),
       ...db.projects.map((p) => h('option', { value: p.id }, p.name)));
     input.value = value || '';
     label.append(input);
@@ -71,12 +71,12 @@ function buildField(f, value) {
     input = h('input', { type: 'password', 'data-k': f.k, autocomplete: 'off' });
     input.value = value || '';
     label.append(h('div', { class: 'field-row' }, input,
-      h('button', { type: 'button', class: 'mini', title: 'Göster / gizle',
+      h('button', { type: 'button', class: 'mini', title: _t('Göster / gizle'),
         onclick: () => { input.type = input.type === 'password' ? 'text' : 'password'; } }, '👁'),
-      h('button', { type: 'button', class: 'mini', title: 'Güçlü şifre üret',
+      h('button', { type: 'button', class: 'mini', title: _t('Güçlü şifre üret'),
         onclick: () => { input.value = generatePassword(); input.type = 'text'; } }, '🎲'),
-      h('button', { type: 'button', class: 'mini', title: 'Kopyala',
-        onclick: () => { if (input.value) { kasa.copy(input.value, true); toast('Şifre kopyalandı · 30 sn sonra silinecek'); } } }, '⧉')));
+      h('button', { type: 'button', class: 'mini', title: _t('Kopyala'),
+        onclick: () => { if (input.value) { kasa.copy(input.value, true); toast(_t('Şifre kopyalandı · 30 sn sonra silinecek')); } } }, '⧉')));
   } else {
     input = h('input', { type: f.type, 'data-k': f.k, placeholder: f.ph || '', autocomplete: 'off' });
     input.value = value || '';
@@ -104,14 +104,14 @@ function openEditor(type, item = null, extra = {}) {
 // Düzenleme ekranının altındaki zaman bilgisi (otomatik tutulur, elle değiştirilmez)
 function stampDetails(type, x) {
   const rows = [
-    ['Oluşturuldu', x.created],
-    ['Son değişiklik', x.updated],
-    type === 'password' && ['Şifre son değişti', x.pwChanged],
-    type === 'task' && x.done && ['Tamamlandı', x.completedAt],
-    type === 'project' && ['Son hareket', projectActivity(x)],
+    [_t('Oluşturuldu'), x.created],
+    [_t('Son değişiklik'), x.updated],
+    type === 'password' && [_t('Şifre son değişti'), x.pwChanged],
+    type === 'task' && x.done && [_t('Tamamlandı'), x.completedAt],
+    type === 'project' && [_t('Son hareket'), projectActivity(x)],
   ].filter(Boolean);
   return h('div', { class: 'stamps' },
-    ...rows.map(([label, ms]) => h('div', null, h('span', null, label), h('b', null, ms ? fmtFull(ms) : 'bu özellikten önce eklendi'))));
+    ...rows.map(([label, ms]) => h('div', null, h('span', null, label), h('b', null, ms ? fmtFull(ms) : _t('bu özellikten önce eklendi')))));
 }
 
 function closeEditor() {
@@ -133,10 +133,10 @@ async function checkDuplicates(type, item, values, isNew) {
   if (type === 'password' && (isNew || K.accountKey(item) !== K.accountKey(probe))) {
     const dup = db.passwords.find((p) => p !== item && K.sameAccount(p, probe));
     if (!dup) return true;
-    const choice = await ask('Bu hesap zaten kayıtlı',
-      `“${dup.title}” · ${dup.username || 'kullanıcı adı yok'} aynı site ve kullanıcı adıyla kayıtlı.`,
-      [{ label: 'Vazgeç', value: null }, { label: 'Ayrı kaydet', value: 'keep' },
-        { label: 'Mevcut kaydı güncelle', value: 'merge', primary: true }]);
+    const choice = await ask(_t('Bu hesap zaten kayıtlı'),
+      _t("“{0}” · {1} aynı site ve kullanıcı adıyla kayıtlı.", dup.title, dup.username || 'kullanıcı adı yok'),
+      [{ label: _t('Vazgeç'), value: null }, { label: _t('Ayrı kaydet'), value: 'keep' },
+        { label: _t('Mevcut kaydı güncelle'), value: 'merge', primary: true }]);
     if (choice === 'merge') {
       for (const [k, v] of Object.entries(values)) {
         if (k === 'note') { if (v && !(dup.note || '').includes(v)) dup.note = [dup.note, v].filter(Boolean).join('\n'); }
@@ -148,7 +148,7 @@ async function checkDuplicates(type, item, values, isNew) {
       persist();
       closeEditor();
       render();
-      toast('Mevcut kayıt güncellendi');
+      toast(_t('Mevcut kayıt güncellendi'));
       return false;
     }
     return choice === 'keep';
@@ -157,8 +157,8 @@ async function checkDuplicates(type, item, values, isNew) {
   if (type === 'task' && (isNew || K.lower(item.title) !== K.lower(values.title))) {
     const dup = findDuplicateTask(probe);
     if (!dup) return true;
-    return !!(await ask('Bu görev zaten var', `“${dup.title}” açık görevler arasında zaten duruyor.`,
-      [{ label: 'Vazgeç', value: false }, { label: 'Yine de kaydet', value: true, primary: true }]));
+    return !!(await ask(_t('Bu görev zaten var'), _t("“{0}” açık görevler arasında zaten duruyor.", dup.title),
+      [{ label: _t('Vazgeç'), value: false }, { label: _t('Yine de kaydet'), value: true, primary: true }]));
   }
 
   if (type === 'note' && (isNew || K.lower(item.title) !== K.lower(values.title))) {
@@ -167,16 +167,16 @@ async function checkDuplicates(type, item, values, isNew) {
     const dup = db.notes.find((n) => n !== item
       && ((title && K.lower(n.title) === title) || (body && (n.body || '').trim() === body)));
     if (!dup) return true;
-    const choice = await ask('Benzer bir not var', `“${dup.title || 'Başlıksız not'}” aynı başlığa ya da içeriğe sahip.`,
-      [{ label: 'Vazgeç', value: null }, { label: 'Mevcut notu aç', value: 'open' },
-        { label: 'Yine de kaydet', value: 'keep', primary: true }]);
+    const choice = await ask(_t('Benzer bir not var'), _t("“{0}” aynı başlığa ya da içeriğe sahip.", dup.title || 'Başlıksız not'),
+      [{ label: _t('Vazgeç'), value: null }, { label: _t('Mevcut notu aç'), value: 'open' },
+        { label: _t('Yine de kaydet'), value: 'keep', primary: true }]);
     if (choice === 'open') openEditor('note', dup);
     return choice === 'keep';
   }
 
   if (type === 'project') {
     const dup = db.projects.find((p) => p !== item && K.lower(p.name) === K.lower(values.name));
-    if (dup) { toast('Bu isimde bir proje zaten var'); return false; }
+    if (dup) { toast(_t('Bu isimde bir proje zaten var')); return false; }
   }
   return true;
 }
@@ -191,7 +191,7 @@ async function saveEditor() {
   }
   const missing = FORMS[type].fields.find((f) => f.req && !String(values[f.k] || '').trim());
   if (missing) {
-    toast(`“${missing.label}” boş olamaz`);
+    toast(_t("“{0}” boş olamaz", missing.label));
     form.querySelector(`[data-k="${missing.k}"]`)?.focus();
     return;
   }
@@ -207,7 +207,7 @@ async function saveEditor() {
   persist();
   closeEditor();
   render();
-  toast('Kaydedildi');
+  toast(_t('Kaydedildi'));
   if (type === 'note' || type === 'task') offerLooseCreds(item);
 }
 

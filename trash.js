@@ -3,7 +3,7 @@
 
 const TRASH_DAYS = 30;
 const TRASH_ICON = { task: '✓', note: '📝', password: '🔑', project: '📁' };
-const itemName = (x) => x.title || x.name || 'Başlıksız';
+const itemName = (x) => x.title || x.name || _t('Başlıksız');
 
 // Kaydı çöp kutusuna taşı. Proje silinirse bağlı kayıtlar projesiz kalır; geri yüklenince yeniden bağlanır.
 function moveToTrash(type, item, { silent = false } = {}) {
@@ -27,7 +27,7 @@ function moveToTrash(type, item, { silent = false } = {}) {
   persist();
   if (!silent) {
     render();
-    toast(`“${itemName(item)}” çöp kutusuna taşındı`, { label: 'Geri al', fn: () => restoreFromTrash(entry.id) });
+    toast(_t("“{0}” çöp kutusuna taşındı", itemName(item)), { label: _t('Geri al'), fn: () => restoreFromTrash(entry.id) });
   }
   return entry;
 }
@@ -51,7 +51,7 @@ function restoreFromTrash(entryId, { silent = false } = {}) {
   persist();
   if (!silent) {
     render();
-    toast(`“${itemName(e.item)}” geri yüklendi`);
+    toast(_t("“{0}” geri yüklendi", itemName(e.item)));
   }
 }
 
@@ -65,24 +65,24 @@ function purgeTrash() {
 }
 
 async function deleteForever(entry) {
-  if (!(await ask('Kalıcı olarak silinsin mi?', `“${itemName(entry.item)}” geri getirilemeyecek.`,
-    [{ label: 'Vazgeç', value: false }, { label: 'Kalıcı sil', value: true, primary: true }]))) return;
+  if (!(await ask(_t('Kalıcı olarak silinsin mi?'), `“${itemName(entry.item)}” geri getirilemeyecek.`,
+    [{ label: _t('Vazgeç'), value: false }, { label: _t('Kalıcı sil'), value: true, primary: true }]))) return;
   db.trash.splice(db.trash.indexOf(entry), 1);
   tombstone('trash', entry.id);
   persist();
   render();
-  toast('Kalıcı olarak silindi');
+  toast(_t('Kalıcı olarak silindi'));
 }
 
 async function emptyTrash() {
   const n = db.trash.length;
-  if (!n || !(await ask('Çöp kutusu boşaltılsın mı?', `${n} kayıt kalıcı olarak silinecek ve geri getirilemeyecek.`,
-    [{ label: 'Vazgeç', value: false }, { label: 'Boşalt', value: true, primary: true }]))) return;
+  if (!n || !(await ask(_t('Çöp kutusu boşaltılsın mı?'), _t("{0} kayıt kalıcı olarak silinecek ve geri getirilemeyecek.", n),
+    [{ label: _t('Vazgeç'), value: false }, { label: _t('Boşalt'), value: true, primary: true }]))) return;
   for (const e of db.trash) tombstone('trash', e.id);
   db.trash = [];
   persist();
   render();
-  toast('Çöp kutusu boşaltıldı');
+  toast(_t('Çöp kutusu boşaltıldı'));
 }
 
 function openTrash() {
@@ -98,21 +98,21 @@ function openTrash() {
 VIEWS.trash = function (c) {
   const list = (db.trash || []).slice().sort((a, b) => b.deletedAt - a.deletedAt);
   c.append(h('div', { class: 'project-head' },
-    h('button', { class: 'icon-btn', title: 'Geri', onclick: () => { view = healthReturn; render(); } }, '←'),
-    h('h3', null, '🗑 Çöp kutusu'),
-    list.length && h('button', { class: 'mini', onclick: emptyTrash }, 'Boşalt')));
+    h('button', { class: 'icon-btn', title: _t('Geri'), onclick: () => { view = healthReturn; render(); } }, '←'),
+    h('h3', null, _t('🗑 Çöp kutusu')),
+    list.length && h('button', { class: 'mini', onclick: emptyTrash }, _t('Boşalt'))));
   c.append(h('div', { class: 'muted small', style: 'padding:0 4px 8px' },
-    `Silinen kayıtlar ${TRASH_DAYS} gün burada kalır, sonra kalıcı olarak silinir.`));
-  if (!list.length) return c.append(empty('🗑', 'Çöp kutusu boş.'));
+    _t("Silinen kayıtlar {0} gün burada kalır, sonra kalıcı olarak silinir.", TRASH_DAYS)));
+  if (!list.length) return c.append(empty('🗑', _t('Çöp kutusu boş.')));
   for (const e of list) {
     const left = Math.max(0, Math.ceil((e.deletedAt + TRASH_DAYS * 86_400_000 - Date.now()) / 86_400_000));
     c.append(h('div', { class: `item trash-row ${TYPE_META[e.type].cls}` },
       h('div', { class: 'ico' }, TRASH_ICON[e.type]),
       h('div', { class: 'body' },
         h('div', { class: 'title' }, itemName(e.item)),
-        h('div', { class: 'sub' }, `${TYPE_META[e.type].label} · silindi ${fmtStamp(e.deletedAt)} · ${left} gün kaldı`)),
+        h('div', { class: 'sub' }, _t("{0} · silindi {1} · {2} gün kaldı", TYPE_META[e.type].label, fmtStamp(e.deletedAt), left))),
       h('div', { class: 'side' },
-        h('button', { class: 'mini primary-mini', onclick: () => restoreFromTrash(e.id) }, 'Geri yükle'),
-        h('button', { class: 'mini', title: 'Kalıcı sil', onclick: () => deleteForever(e) }, '✕'))));
+        h('button', { class: 'mini primary-mini', onclick: () => restoreFromTrash(e.id) }, _t('Geri yükle')),
+        h('button', { class: 'mini', title: _t('Kalıcı sil'), onclick: () => deleteForever(e) }, '✕'))));
   }
 };

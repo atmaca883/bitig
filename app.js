@@ -7,7 +7,7 @@ function applyWinState(s) {
   cl.toggle('collapsed', s.collapsed);
   cl.toggle('pinned', s.pinned);
   for (const d of ['left', 'right', 'float']) cl.toggle('dock-' + d, s.dock === d);
-  $('#btnPin').title = s.pinned ? 'Her zaman üstte: açık' : 'Her zaman üstte: kapalı';
+  $('#btnPin').title = s.pinned ? _t('Her zaman üstte: açık') : _t('Her zaman üstte: kapalı');
 }
 
 kasa.win.state().then(applyWinState);
@@ -33,8 +33,8 @@ function showBanner(r) {
       const t = db?.tasks.find((x) => x.id === r.id);
       if (t) { setDone(t, true); persist(); render(); }
       b.hidden = true;
-    } }, 'Tamamlandı'),
-    h('button', { class: 'mini', onclick: () => { b.hidden = true; } }, 'Tamam'),
+    } }, _t('Tamamlandı')),
+    h('button', { class: 'mini', onclick: () => { b.hidden = true; } }, _t('Tamam')),
   );
   b.hidden = false;
 }
@@ -61,7 +61,7 @@ kasa.onMerged(({ data, changes, from }) => {
   render();
   pushReminders();
   updateBadge();
-  if (changes) toast(from ? `⟳ ${from}: ${changes} değişiklik geldi` : `⟳ Diğer cihazlardan ${changes} değişiklik geldi`);
+  if (changes) toast(from ? _t("⟳ {0}: {1} değişiklik geldi", from, changes) : _t("⟳ Diğer cihazlardan {0} değişiklik geldi", changes));
 });
 
 function render() {

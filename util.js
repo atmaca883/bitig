@@ -42,38 +42,38 @@ const lower = K.lower;
 const cleanErr = (e) => String(e?.message || e).replace(/^.*Error: /, '');
 
 function fmtDate(s) {
-  return new Date(s + 'T00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+  return new Date(s + 'T00:00').toLocaleDateString(KasaI18n.locale(), { day: 'numeric', month: 'short' });
 }
 
 function fmtDateTime(s) {
-  return new Date(s).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return new Date(s).toLocaleString(KasaI18n.locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
 function fmtAgo(ms) {
   const d = new Date(ms);
   return localDate(d) === todayStr()
-    ? d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-    : d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+    ? d.toLocaleTimeString(KasaI18n.locale(), { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString(KasaI18n.locale(), { day: 'numeric', month: 'short' });
 }
 
 // Zaman damgası: kısa (listelerde) ve uzun (ayrıntıda) biçim
 function fmtStamp(ms) {
   if (!ms) return '';
   const d = new Date(ms);
-  const time = d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  const time = d.toLocaleTimeString(KasaI18n.locale(), { hour: '2-digit', minute: '2-digit' });
   const day = localDate(d);
-  if (day === todayStr()) return `Bugün ${time}`;
-  if (day === addDays(-1)) return `Dün ${time}`;
+  if (day === todayStr()) return _t("Bugün {0}", time);
+  if (day === addDays(-1)) return _t("Dün {0}", time);
   const sameYear = d.getFullYear() === new Date().getFullYear();
-  return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) }) + ' ' + time;
+  return d.toLocaleDateString(KasaI18n.locale(), { day: 'numeric', month: 'short', ...(sameYear ? {} : { year: 'numeric' }) }) + ' ' + time;
 }
 
 function fmtFull(ms) {
-  return ms ? new Date(ms).toLocaleString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit' }) : '—';
+  return ms ? new Date(ms).toLocaleString(KasaI18n.locale(), { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit' }) : '—';
 }
 
 function stampTitle(x) {
-  return [x.created && 'Oluşturuldu: ' + fmtFull(x.created), x.updated && 'Son değişiklik: ' + fmtFull(x.updated)].filter(Boolean).join('\n');
+  return [x.created && _t('Oluşturuldu: ') + fmtFull(x.created), x.updated && _t('Son değişiklik: ') + fmtFull(x.updated)].filter(Boolean).join('\n');
 }
 
 function stampChip(x, ms = x.updated, prefix = '🕒 ') {

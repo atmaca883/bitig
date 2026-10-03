@@ -16,7 +16,7 @@
     let s = {};
     try { s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch {}
     if (!s.deviceId) s.deviceId = 'tel-' + crypto.randomUUID();
-    if (!s.deviceName) s.deviceName = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /iPad/.test(navigator.userAgent) ? 'iPad' : /Android/.test(navigator.userAgent) ? 'Android telefon' : 'Telefon';
+    if (!s.deviceName) s.deviceName = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /iPad/.test(navigator.userAgent) ? 'iPad' : /Android/.test(navigator.userAgent) ? _t('Android telefon') : 'Telefon';
     s.autoLockMinutes ??= 5;
     return s;
   }
@@ -101,8 +101,8 @@
         if (adoptWraps(file.wraps)) wrapsChanged = true;
       } catch (e) {
         if (e?.authLost) throw e;
-        S.remotes.set(m[1], { version, data: null, device: { id: m[1], name: 'Bilinmeyen cihaz' }, savedAt: f.modified,
-          error: 'Okunamadı: başka bir kasaya ait ya da henüz tam yüklenmemiş' });
+        S.remotes.set(m[1], { version, data: null, device: { id: m[1], name: _t('Bilinmeyen cihaz') }, savedAt: f.modified,
+          error: _t('Okunamadı: başka bir kasaya ait ya da henüz tam yüklenmemiş') });
       }
     }
     for (const id of [...S.remotes.keys()]) if (!seen.has(id)) S.remotes.delete(id);
@@ -123,7 +123,7 @@
     } catch (e) {
       S.dirty = true; // bağlantı gelince yeniden denenir
       if (e?.authLost) S.needsReconnect = true;
-      S.lastError = e?.authLost ? e.message : 'Yüklenemedi: ' + e.message;
+      S.lastError = e?.authLost ? e.message : _t('Yüklenemedi: ') + e.message;
     }
   }
 
@@ -137,7 +137,7 @@
     if (S.syncing) return S.syncing;
     S.syncing = (async () => {
       if (!S.dek || !drive()?.isConnected()) return;
-      if (!navigator.onLine) { S.lastError = 'İnternet yok · değişiklikler bağlantı gelince gönderilecek'; return; }
+      if (!navigator.onLine) { S.lastError = _t('İnternet yok · değişiklikler bağlantı gelince gönderilecek'); return; }
       try {
         const wrapsChanged = await readRemotes(await drive().list());
         const merged = mergeRemotes(S.data);
@@ -187,7 +187,7 @@
 
   async function join(password) {
     const files = await listVaultFiles();
-    if (!files.length) throw new Error('Bulutta Bitig bulunamadı. Bilgisayardaki Bitig’de Ayarlar → Cihazlar arası eşitleme’yi aç.');
+    if (!files.length) throw new Error(_t('Bulutta Bitig bulunamadı. Bilgisayardaki Bitig’de Ayarlar → Cihazlar arası eşitleme’yi aç.'));
     const parsed = [];
     for (const f of files) {
       try { parsed.push({ f, file: JSON.parse(await drive().read(f)) }); } catch {}
@@ -196,7 +196,7 @@
     for (const p of parsed) {
       try { dek = await C.unwrapKey(p.file.wraps.password, password); break; } catch {}
     }
-    if (!dek) { await slowDown(); throw new Error('Ana şifre yanlış.'); }
+    if (!dek) { await slowDown(); throw new Error(_t('Ana şifre yanlış.')); }
     let data = null;
     let wraps = null;
     for (const p of parsed) {
@@ -213,22 +213,22 @@
   }
 
   async function verifyPassword(password) {
-    if (!S.dek || S.pinLocked) throw new Error('Bitig kilitli.');
-    try { await C.unwrapKey(S.wraps.password, password); } catch { await slowDown(); throw new Error('Mevcut ana şifre yanlış.'); }
+    if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
+    try { await C.unwrapKey(S.wraps.password, password); } catch { await slowDown(); throw new Error(_t('Mevcut ana şifre yanlış.')); }
   }
 
   const onlyOnComputer = (what) => async () => {
-    throw new Error(`${what} bilgisayardaki Bitig’den yapılır; telefon değişikliği eşitlemeyle otomatik alır.`);
+    throw new Error(_t("{0} bilgisayardaki Bitig’den yapılır; telefon değişikliği eşitlemeyle otomatik alır.", what));
   };
 
   // ---------- arayüzün beklediği API ----------
   root.kasa = {
     vaultExists: async () => !!(await Store.get('vault')),
-    createVault: onlyOnComputer('Yeni kasa oluşturmak'),
+    createVault: onlyOnComputer(_t('Yeni kasa oluşturmak')),
     async unlock(password) {
       const file = await Store.get('vault');
       let dek;
-      try { dek = await C.unwrapKey(file.wraps.password, password); } catch { await slowDown(); throw new Error('Ana şifre yanlış.'); }
+      try { dek = await C.unwrapKey(file.wraps.password, password); } catch { await slowDown(); throw new Error(_t('Ana şifre yanlış.')); }
       const data = await C.openJson(dek, file.box);
       let pinRecord = null;
       try { if (file.wraps.pinBox) pinRecord = await C.openJson(dek, file.wraps.pinBox); } catch {}
@@ -236,7 +236,7 @@
       return unlockedResult();
     },
     async save(data) {
-      if (!S.dek || S.pinLocked) throw new Error('Bitig kilitli.');
+      if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
       S.data = mergeRemotes(data);
       await persistLocal();
       scheduleUpload();
@@ -268,7 +268,7 @@
       },
       async set(password, pin) {
         await verifyPassword(password);
-        if (!/^\d{4}$/.test(String(pin))) throw new Error('PIN 4 rakam olmalı.');
+        if (!/^\d{4}$/.test(String(pin))) throw new Error(_t('PIN 4 rakam olmalı.'));
         S.pinRecord = await C.hashPin(String(pin));
         await persistLocal();
         return true;
@@ -280,14 +280,14 @@
         return true;
       },
     },
-    recover: onlyOnComputer('Kurtarma anahtarıyla yeni ana şifre belirlemek'),
-    changePassword: onlyOnComputer('Ana şifreyi değiştirmek'),
-    newRecoveryKey: onlyOnComputer('Kurtarma anahtarı oluşturmak'),
-    restore: onlyOnComputer('Yedekten geri yüklemek'),
+    recover: onlyOnComputer(_t('Kurtarma anahtarıyla yeni ana şifre belirlemek')),
+    changePassword: onlyOnComputer(_t('Ana şifreyi değiştirmek')),
+    newRecoveryKey: onlyOnComputer(_t('Kurtarma anahtarı oluşturmak')),
+    restore: onlyOnComputer(_t('Yedekten geri yüklemek')),
     backup: async () => false,
     info: async () => ({
       hasRecovery: !!S.wraps?.recovery, recoveryCreated: S.wraps?.recovery?.created || null,
-      dataDir: 'Bu telefon (şifreli)', electron: 'telefon',
+      dataDir: _t('Bu telefon (şifreli)'), electron: 'telefon',
     }),
 
     settings: {
@@ -331,7 +331,7 @@
           lastSync: S.lastSync, lastWrite: S.lastUpload, lastError: S.lastError, pending: S.dirty,
           devices: [
             { id: settings.deviceId, name: settings.deviceName, platform, savedAt: S.lastUpload, self: true, error: '' },
-            ...[...S.remotes.entries()].map(([id, r]) => ({ id, name: r.device?.name || 'Bilinmeyen cihaz', platform: r.device?.platform || '', savedAt: r.savedAt, error: r.error })),
+            ...[...S.remotes.entries()].map(([id, r]) => ({ id, name: r.device?.name || _t('Bilinmeyen cihaz'), platform: r.device?.platform || '', savedAt: r.savedAt, error: r.error })),
           ],
         };
       },

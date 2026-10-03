@@ -71,7 +71,7 @@ function formDialog({ title, text, fields, submitLabel, onSubmit }) {
     h('div', { class: 'dialog-fields' }, ...inputs),
     err,
     h('div', { class: 'dialog-actions' },
-      h('button', { class: 'ghost', type: 'button', onclick: () => closeDialog(false) }, 'Vazgeç'), btn));
+      h('button', { class: 'ghost', type: 'button', onclick: () => closeDialog(false) }, _t('Vazgeç')), btn));
     $('#dialog').replaceChildren(form);
     $('#dialog').hidden = false;
     inputs[0].focus();
@@ -83,15 +83,15 @@ function showRecoveryKey(recoveryKey, { first = false } = {}) {
   return new Promise((resolve) => {
     dialogResolve = resolve;
     dialogLocked = true; // anahtar yazılmadan Esc ile kapanmasın
-    const ok = h('button', { class: 'primary', type: 'button', disabled: true, onclick: () => closeDialog(true) }, 'Tamam');
+    const ok = h('button', { class: 'primary', type: 'button', disabled: true, onclick: () => closeDialog(true) }, _t('Tamam'));
     const cb = h('input', { type: 'checkbox', onchange: () => { ok.disabled = !cb.checked; } });
     $('#dialog').replaceChildren(h('div', { class: 'dialog-card' },
-      h('h3', null, '🛟 Kurtarma anahtarın'),
-      h('p', null, (first ? 'Kasan hazır. ' : '') +
-        'Ana şifreni unutursan kasayı sadece bu anahtarla açabilirsin. Kâğıda yaz ve güvenli bir yerde sakla; bu bilgisayarda bir dosyaya kaydetme.'),
+      h('h3', null, _t('🛟 Kurtarma anahtarın')),
+      h('p', null, (first ? _t('Kasan hazır. ') : '') +
+        _t('Ana şifreni unutursan kasayı sadece bu anahtarla açabilirsin. Kâğıda yaz ve güvenli bir yerde sakla; bu bilgisayarda bir dosyaya kaydetme.')),
       h('div', { class: 'recovery-key' }, recoveryKey),
-      h('button', { class: 'ghost small', type: 'button', onclick: () => { kasa.copy(recoveryKey, true); toast('Kopyalandı · 30 sn sonra panodan silinecek'); } }, '⧉ Kopyala'),
-      h('label', { class: 'check-line' }, cb, 'Bu anahtarı güvenli bir yere yazdım'),
+      h('button', { class: 'ghost small', type: 'button', onclick: () => { kasa.copy(recoveryKey, true); toast(_t('Kopyalandı · 30 sn sonra panodan silinecek')); } }, '⧉ Kopyala'),
+      h('label', { class: 'check-line' }, cb, _t('Bu anahtarı güvenli bir yere yazdım')),
       h('div', { class: 'dialog-actions' }, ok)));
     $('#dialog').hidden = false;
   });

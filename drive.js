@@ -15,29 +15,29 @@
   // Geliştirme: bilgisayardaki ön izleme sunucusunun /dev-drive/ klasörü (sahte bulut)
   const DevDrive = {
     id: 'dev',
-    label: 'Geliştirme klasörü (test)',
+    label: _t('Geliştirme klasörü (test)'),
     available: () => ['localhost', '127.0.0.1'].includes(location.hostname),
     connected: false,
     async connect() {
       const r = await fetch('/dev-drive/list', { cache: 'no-store' });
-      if (!r.ok) throw new Error('Geliştirme klasörüne ulaşılamadı');
+      if (!r.ok) throw new Error(_t('Geliştirme klasörüne ulaşılamadı'));
       this.connected = true;
       localStorage.setItem('kasa.dev.connected', '1');
     },
     isConnected() { return this.connected || localStorage.getItem('kasa.dev.connected') === '1'; },
     async list() {
       const r = await fetch('/dev-drive/list', { cache: 'no-store' });
-      if (!r.ok) throw new Error('Liste alınamadı (' + r.status + ')');
+      if (!r.ok) throw new Error(_t('Liste alınamadı (') + r.status + ')');
       return (await r.json()).map((f) => ({ ...f, ref: f.name }));
     },
     async read(entry) {
       const r = await fetch('/dev-drive/file/' + encodeURIComponent(entry.name), { cache: 'no-store' });
-      if (!r.ok) throw new Error('Okunamadı (' + r.status + ')');
+      if (!r.ok) throw new Error(_t('Okunamadı (') + r.status + ')');
       return r.text();
     },
     async write(name, text) {
       const r = await fetch('/dev-drive/file/' + encodeURIComponent(name), { method: 'PUT', body: text, headers: { 'Content-Type': 'application/octet-stream' } });
-      if (!r.ok) throw new Error('Yazılamadı (' + r.status + ')');
+      if (!r.ok) throw new Error(_t('Yazılamadı (') + r.status + ')');
     },
     async remove(name) {
       await fetch('/dev-drive/file/' + encodeURIComponent(name), { method: 'DELETE' });
@@ -48,7 +48,7 @@
   const comingSoon = (id, label) => ({
     id, label, available: () => false, comingSoon: true,
     isConnected: () => false,
-    connect: async () => { throw new Error(label + ' bağlantısı bir sonraki aşamada gelecek.'); },
+    connect: async () => { throw new Error(label + _t(' bağlantısı bir sonraki aşamada gelecek.')); },
   });
 
   // ---------- Dropbox (Uygulamalar/Bitig klasörü) ----------
@@ -82,8 +82,8 @@
       const saved = JSON.parse(sessionStorage.getItem('kasa.dbx') || 'null');
       sessionStorage.removeItem('kasa.dbx');
       history.replaceState(null, '', here()); // adres çubuğunda kod kalmasın
-      if (q.has('error')) throw new Error(q.get('error_description') || 'Dropbox izni verilmedi.');
-      if (!saved || saved.state !== q.get('state')) throw new Error('Dropbox girişi doğrulanamadı; tekrar dene.');
+      if (q.has('error')) throw new Error(q.get('error_description') || _t('Dropbox izni verilmedi.'));
+      if (!saved || saved.state !== q.get('state')) throw new Error(_t('Dropbox girişi doğrulanamadı; tekrar dene.'));
       const tokens = await root.KasaDropbox.exchangeCode({
         clientId: cfg().dropbox, redirectUri: saved.redirect, code: q.get('code'), verifier: saved.verifier, endpoints: dbxEndpoints(),
       });

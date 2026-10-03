@@ -16,13 +16,13 @@ async function showLock(msg = '') {
   $('#lnkForgot').hidden = !vaultExists;
   $('#prompts').replaceChildren();   // öneri kartları şifre içerebilir; kilitte temizle
   closeDialog(null);
-  $('#lockTitle').textContent = vaultExists ? 'Tekrar hoş geldin' : 'Kasanı oluştur';
+  $('#lockTitle').textContent = vaultExists ? _t('Tekrar hoş geldin') : _t('Kasanı oluştur');
   $('#lockHint').textContent = vaultExists
-    ? 'Devam etmek için ana şifreni gir.'
-    : 'Tüm verilerin bu ana şifreyle şifrelenip bu bilgisayarda saklanacak.';
+    ? _t('Devam etmek için ana şifreni gir.')
+    : _t('Tüm verilerin bu ana şifreyle şifrelenip bu bilgisayarda saklanacak.');
   $('#pw2').hidden = vaultExists;
   $('#lockWarn').hidden = vaultExists;
-  $('#lockSubmit').textContent = vaultExists ? 'Kilidi aç' : 'Kasayı oluştur';
+  $('#lockSubmit').textContent = vaultExists ? _t('Kilidi aç') : _t('Kasayı oluştur');
   $('#pw1').value = '';
   $('#pw2').value = '';
   $('#lockError').textContent = msg;
@@ -37,8 +37,8 @@ $('#lockForm').addEventListener('submit', async (e) => {
   $('#lockError').textContent = '';
   try {
     if (!vaultExists) {
-      if (pw.length < 8) throw new Error('Ana şifre en az 8 karakter olmalı.');
-      if (pw !== $('#pw2').value) throw new Error('Şifreler aynı değil.');
+      if (pw.length < 8) throw new Error(_t('Ana şifre en az 8 karakter olmalı.'));
+      if (pw !== $('#pw2').value) throw new Error(_t('Şifreler aynı değil.'));
     }
     btn.disabled = true;
     res = vaultExists ? await kasa.unlock(pw) : await kasa.createVault(pw);
@@ -61,9 +61,9 @@ function acceptVault(res) {
     showRecoveryKey(res.recoveryKey, { first: true });
   } else if (!res.hasRecovery) {
     addPrompt({
-      key: 'recovery', icon: '🛟', title: 'Kurtarma anahtarın yok',
-      sub: 'Ana şifreni unutursan kasayı açmanın tek yolu bu. Bir dakikanı alır.',
-      actions: [{ label: 'Şimdi oluştur', primary: true, fn: createRecoveryFlow }, { label: 'Sonra' }],
+      key: 'recovery', icon: '🛟', title: _t('Kurtarma anahtarın yok'),
+      sub: _t('Ana şifreni unutursan kasayı açmanın tek yolu bu. Bir dakikanı alır.'),
+      actions: [{ label: _t('Şimdi oluştur'), primary: true, fn: createRecoveryFlow }, { label: 'Sonra' }],
     });
   }
 }
@@ -71,32 +71,32 @@ function acceptVault(res) {
 $('#lnkForgot').addEventListener('click', async () => {
   let res = null;
   const ok = await formDialog({
-    title: 'Ana şifremi unuttum',
-    text: 'Bitig oluşturulurken verilen kurtarma anahtarını ve yeni ana şifreni gir.',
+    title: _t('Ana şifremi unuttum'),
+    text: _t('Bitig oluşturulurken verilen kurtarma anahtarını ve yeni ana şifreni gir.'),
     fields: [
-      { k: 'key', label: 'Kurtarma anahtarı (XXXX-XXXX-…)', type: 'text', mono: true },
-      { k: 'n1', label: 'Yeni ana şifre' },
-      { k: 'n2', label: 'Yeni ana şifre (tekrar)' },
+      { k: 'key', label: _t('Kurtarma anahtarı (XXXX-XXXX-…)'), type: 'text', mono: true },
+      { k: 'n1', label: _t('Yeni ana şifre') },
+      { k: 'n2', label: _t('Yeni ana şifre (tekrar)') },
     ],
-    submitLabel: 'Kasayı aç',
+    submitLabel: _t('Kasayı aç'),
     onSubmit: async (v) => {
-      if (v.n1.length < 8) return 'Ana şifre en az 8 karakter olmalı.';
-      if (v.n1 !== v.n2) return 'Yeni şifreler aynı değil.';
+      if (v.n1.length < 8) return _t('Ana şifre en az 8 karakter olmalı.');
+      if (v.n1 !== v.n2) return _t('Yeni şifreler aynı değil.');
       res = await kasa.recover(v.key, v.n1);
     },
   });
   if (ok && res) {
     acceptVault(res);
-    toast('Bitig açıldı, yeni ana şifren kaydedildi');
+    toast(_t('Bitig açıldı, yeni ana şifren kaydedildi'));
   }
 });
 
 $('#lnkRestore').addEventListener('click', async () => {
-  if (vaultExists && !(await ask('Yedekten geri yükle',
-    'Şu anki kasa silinmez, “vault-onceki-…” adıyla saklanır. Yüklenen yedeği, o yedeğin ana şifresiyle açacaksın.',
-    [{ label: 'Vazgeç', value: false }, { label: 'Yedek seç', value: true, primary: true }]))) return;
+  if (vaultExists && !(await ask(_t('Yedekten geri yükle'),
+    _t('Şu anki kasa silinmez, “vault-onceki-…” adıyla saklanır. Yüklenen yedeği, o yedeğin ana şifresiyle açacaksın.'),
+    [{ label: _t('Vazgeç'), value: false }, { label: _t('Yedek seç'), value: true, primary: true }]))) return;
   try {
-    if (await kasa.restore()) showLock('Yedek yüklendi. Bu yedeğin ana şifresiyle aç.');
+    if (await kasa.restore()) showLock(_t('Yedek yüklendi. Bu yedeğin ana şifresiyle aç.'));
   } catch (e) {
     $('#lockError').textContent = cleanErr(e);
   }
@@ -179,8 +179,8 @@ async function pressPin(key) {
   pinBusy = false;
   drawPinDots();
   if (r.ok) { acceptVault(r); return; }
-  if (r.full) { showLock('PIN 5 kez yanlış girildi. Güvenlik için ana şifre gerekiyor.'); return; }
-  $('#pinError').textContent = `Yanlış PIN · ${r.left} deneme kaldı`;
+  if (r.full) { showLock(_t('PIN 5 kez yanlış girildi. Güvenlik için ana şifre gerekiyor.')); return; }
+  $('#pinError').textContent = _t("Yanlış PIN · {0} deneme kaldı", r.left);
   $('#pinDots').classList.remove('shake');
   void $('#pinDots').offsetWidth;
   $('#pinDots').classList.add('shake');
@@ -200,12 +200,12 @@ $('#lnkPinMaster').addEventListener('click', () => showLock());
 // Sistem kilidi (Win+L) → hızlı kilit; uyku → tam kilit. Önce bekleyen değişiklik kaydedilir.
 kasa.onLockRequest((kind) => {
   if (!db) return;
-  if (kind === 'full') lock('Bilgisayar uyku moduna geçtiği için kasa kilitlendi.');
-  else quickLock('Bilgisayar kilitlendiği için kasa da kilitlendi.');
+  if (kind === 'full') lock(_t('Bilgisayar uyku moduna geçtiği için kasa kilitlendi.'));
+  else quickLock(_t('Bilgisayar kilitlendiği için kasa da kilitlendi.'));
 });
 kasa.onLocked((mode) => {
   if (!db) return;
-  if (mode === 'pin') showPinLock('Bitig kilitlendi.'); else showLock('Bitig kilitlendi.');
+  if (mode === 'pin') showPinLock(_t('Bitig kilitlendi.')); else showLock(_t('Bitig kilitlendi.'));
 });
 
 for (const ev of ['mousemove', 'keydown', 'mousedown', 'wheel']) {
@@ -214,7 +214,7 @@ for (const ev of ['mousemove', 'keydown', 'mousedown', 'wheel']) {
 
 setInterval(() => {
   if (db && autoLockMinutes > 0 && Date.now() - lastActivity > autoLockMinutes * 60_000) {
-    quickLock(`${autoLockMinutes} dakika işlem yapılmadığı için kilitlendi.`);
+    quickLock(_t("{0} dakika işlem yapılmadığı için kilitlendi.", autoLockMinutes));
   }
   if (db) updateBadge();
 }, 30_000);
@@ -225,39 +225,39 @@ async function setPinFlow() {
   const st = await kasa.pin.status();
   const pinField = (k, label) => ({ k, label, attrs: { inputmode: 'numeric', maxlength: '4' } });
   const ok = await formDialog({
-    title: st.hasPin ? 'PIN\'i değiştir' : 'Hızlı kilit PIN\'i belirle',
-    text: 'Kilitlenince ana şifre yerine 4 haneli PIN istenir. 5 yanlış denemede ana şifre gerekir. Onaylamak için ana şifreni de gir.',
-    fields: [{ k: 'pw', label: 'Ana şifre' }, pinField('p1', 'Yeni PIN (4 rakam)'), pinField('p2', 'Yeni PIN (tekrar)')],
-    submitLabel: 'Kaydet',
+    title: st.hasPin ? _t('PIN\'i değiştir') : _t('Hızlı kilit PIN\'i belirle'),
+    text: _t('Kilitlenince ana şifre yerine 4 haneli PIN istenir. 5 yanlış denemede ana şifre gerekir. Onaylamak için ana şifreni de gir.'),
+    fields: [{ k: 'pw', label: _t('Ana şifre') }, pinField('p1', _t('Yeni PIN (4 rakam)')), pinField('p2', _t('Yeni PIN (tekrar)'))],
+    submitLabel: _t('Kaydet'),
     onSubmit: async (v) => {
-      if (!/^\d{4}$/.test(v.p1)) return 'PIN 4 rakam olmalı.';
-      if (v.p1 !== v.p2) return 'PIN\'ler aynı değil.';
-      if (WEAK_PINS.has(v.p1)) return 'Bu PIN çok kolay tahmin edilir; başka bir tane seç.';
+      if (!/^\d{4}$/.test(v.p1)) return _t('PIN 4 rakam olmalı.');
+      if (v.p1 !== v.p2) return _t('PIN\'ler aynı değil.');
+      if (WEAK_PINS.has(v.p1)) return _t('Bu PIN çok kolay tahmin edilir; başka bir tane seç.');
       await kasa.pin.set(v.pw, v.p1);
     },
   });
-  if (ok) { toast('PIN kaydedildi · 🔒 artık PIN ile kilitler'); openSettingsSheet(); }
+  if (ok) { toast(_t('PIN kaydedildi · 🔒 artık PIN ile kilitler')); openSettingsSheet(); }
 }
 
 async function removePinFlow() {
   const ok = await formDialog({
-    title: 'PIN\'i kaldır',
-    text: 'Kilitlenince yeniden ana şifre istenir. Onaylamak için ana şifreni gir.',
-    fields: [{ k: 'pw', label: 'Ana şifre' }],
-    submitLabel: 'Kaldır',
+    title: _t('PIN\'i kaldır'),
+    text: _t('Kilitlenince yeniden ana şifre istenir. Onaylamak için ana şifreni gir.'),
+    fields: [{ k: 'pw', label: _t('Ana şifre') }],
+    submitLabel: _t('Kaldır'),
     onSubmit: async (v) => { await kasa.pin.remove(v.pw); },
   });
-  if (ok) { toast('PIN kaldırıldı'); openSettingsSheet(); }
+  if (ok) { toast(_t('PIN kaldırıldı')); openSettingsSheet(); }
 }
 
 async function createRecoveryFlow() {
   const info = await kasa.info();
   let recoveryKey = null;
   const ok = await formDialog({
-    title: info.hasRecovery ? 'Yeni kurtarma anahtarı' : 'Kurtarma anahtarı oluştur',
-    text: (info.hasRecovery ? 'Eski anahtar geçersiz olacak. ' : '') + 'Onaylamak için ana şifreni gir.',
-    fields: [{ k: 'pw', label: 'Ana şifre' }],
-    submitLabel: 'Oluştur',
+    title: info.hasRecovery ? _t('Yeni kurtarma anahtarı') : _t('Kurtarma anahtarı oluştur'),
+    text: (info.hasRecovery ? _t('Eski anahtar geçersiz olacak. ') : '') + _t('Onaylamak için ana şifreni gir.'),
+    fields: [{ k: 'pw', label: _t('Ana şifre') }],
+    submitLabel: _t('Oluştur'),
     onSubmit: async (v) => { recoveryKey = await kasa.newRecoveryKey(v.pw); },
   });
   if (!ok || !recoveryKey) return;
@@ -268,18 +268,18 @@ async function createRecoveryFlow() {
 
 async function changePasswordFlow() {
   const ok = await formDialog({
-    title: 'Ana şifreyi değiştir',
+    title: _t('Ana şifreyi değiştir'),
     fields: [
-      { k: 'cur', label: 'Mevcut ana şifre' },
-      { k: 'n1', label: 'Yeni ana şifre' },
-      { k: 'n2', label: 'Yeni ana şifre (tekrar)' },
+      { k: 'cur', label: _t('Mevcut ana şifre') },
+      { k: 'n1', label: _t('Yeni ana şifre') },
+      { k: 'n2', label: _t('Yeni ana şifre (tekrar)') },
     ],
-    submitLabel: 'Değiştir',
+    submitLabel: _t('Değiştir'),
     onSubmit: async (v) => {
-      if (v.n1.length < 8) return 'Yeni ana şifre en az 8 karakter olmalı.';
-      if (v.n1 !== v.n2) return 'Yeni şifreler aynı değil.';
+      if (v.n1.length < 8) return _t('Yeni ana şifre en az 8 karakter olmalı.');
+      if (v.n1 !== v.n2) return _t('Yeni şifreler aynı değil.');
       await kasa.changePassword(v.cur, v.n1);
     },
   });
-  if (ok) toast('Ana şifre değiştirildi');
+  if (ok) toast(_t('Ana şifre değiştirildi'));
 }

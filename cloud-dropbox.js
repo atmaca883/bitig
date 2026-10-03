@@ -7,6 +7,8 @@
   else root.KasaDropbox = api;
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  // Çeviri: tarayıcıda/ana süreçte genel _t, tek başına çalışırken Türkçe
+  const _t = (s, ...a) => (typeof globalThis._t === 'function' ? globalThis._t(s, ...a) : String(s).replace(/\{(\d+)\}/g, (m, i) => (a[i] !== undefined ? a[i] : m)));
 
   const DEFAULT_ENDPOINTS = {
     authorize: 'https://www.dropbox.com/oauth2/authorize',
@@ -16,7 +18,7 @@
   };
 
   class AuthLost extends Error {
-    constructor(msg = 'Dropbox bağlantısı sona erdi; yeniden bağlanman gerekiyor.') { super(msg); this.authLost = true; }
+    constructor(msg = _t('Dropbox bağlantısı sona erdi; yeniden bağlanman gerekiyor.')) { super(msg); this.authLost = true; }
   }
 
   const subtle = () => globalThis.crypto.subtle;
@@ -50,7 +52,7 @@
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
       if (j.error === 'invalid_grant') throw new AuthLost();
-      throw new Error('Dropbox oturumu alınamadı: ' + (j.error_description || j.error || r.status));
+      throw new Error(_t('Dropbox oturumu alınamadı: ') + (j.error_description || j.error || r.status));
     }
     return j;
   }
@@ -69,7 +71,7 @@
 
     async function accessToken(force = false) {
       const t = await getTokens();
-      if (!t?.refresh) throw new AuthLost('Dropbox’a bağlı değil.');
+      if (!t?.refresh) throw new AuthLost(_t('Dropbox’a bağlı değil.'));
       if (!force && t.access && t.expiresAt - 60_000 > Date.now()) return t.access;
       refreshing ||= tokenRequest({ grant_type: 'refresh_token', refresh_token: t.refresh, client_id: clientId }, endpoints)
         .then(async (j) => {
@@ -126,7 +128,7 @@
         const r = await call(`${endpoints.content}/files/download`, {
           method: 'POST', headers: { 'Dropbox-API-Arg': apiArg({ path: '/' + name }) },
         });
-        if (!r.ok) throw new Error('Dropbox’tan okunamadı (' + r.status + ')');
+        if (!r.ok) throw new Error(_t('Dropbox’tan okunamadı (') + r.status + ')');
         return r.text();
       },
       async write(name, text) {
@@ -135,7 +137,7 @@
           headers: { 'Content-Type': 'application/octet-stream', 'Dropbox-API-Arg': apiArg({ path: '/' + name, mode: 'overwrite', mute: true }) },
           body: text,
         });
-        if (!r.ok) throw new Error('Dropbox’a yazılamadı (' + r.status + ')');
+        if (!r.ok) throw new Error(_t('Dropbox’a yazılamadı (') + r.status + ')');
       },
       async remove(name) {
         try { await rpc('/files/delete_v2', { path: '/' + name }); } catch (e) { if (!/not_found/.test(e.summary)) throw e; }
