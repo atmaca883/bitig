@@ -134,7 +134,7 @@ async function checkDuplicates(type, item, values, isNew) {
     const dup = db.passwords.find((p) => p !== item && K.sameAccount(p, probe));
     if (!dup) return true;
     const choice = await ask(_t('Bu hesap zaten kayıtlı'),
-      _t("“{0}” · {1} aynı site ve kullanıcı adıyla kayıtlı.", dup.title, dup.username || 'kullanıcı adı yok'),
+      _t("“{0}” · {1} aynı site ve kullanıcı adıyla kayıtlı.", dup.title, dup.username || _t('kullanıcı adı yok')),
       [{ label: _t('Vazgeç'), value: null }, { label: _t('Ayrı kaydet'), value: 'keep' },
         { label: _t('Mevcut kaydı güncelle'), value: 'merge', primary: true }]);
     if (choice === 'merge') {
@@ -167,7 +167,7 @@ async function checkDuplicates(type, item, values, isNew) {
     const dup = db.notes.find((n) => n !== item
       && ((title && K.lower(n.title) === title) || (body && (n.body || '').trim() === body)));
     if (!dup) return true;
-    const choice = await ask(_t('Benzer bir not var'), _t("“{0}” aynı başlığa ya da içeriğe sahip.", dup.title || 'Başlıksız not'),
+    const choice = await ask(_t('Benzer bir not var'), _t("“{0}” aynı başlığa ya da içeriğe sahip.", dup.title || _t('Başlıksız not')),
       [{ label: _t('Vazgeç'), value: null }, { label: _t('Mevcut notu aç'), value: 'open' },
         { label: _t('Yine de kaydet'), value: 'keep', primary: true }]);
     if (choice === 'open') openEditor('note', dup);
