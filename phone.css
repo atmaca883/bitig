@@ -1,0 +1,53 @@
+/* Telefon uyarlamaları: tam ekran, çentik/alt çubuk güvenli alanları, dokunmatik hedefler. */
+html, body.phone { height: 100%; overscroll-behavior: none; }
+body.phone { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+body.phone #panel { height: 100dvh; border: 0 !important; }
+
+/* masaüstüne özel düğmeler */
+body.phone #btnCollapse, body.phone #btnPin, body.phone #btnQuit, body.phone #btnBrowser, body.phone #tab { display: none !important; }
+
+body.phone .titlebar {
+  height: calc(46px + env(safe-area-inset-top)); padding: env(safe-area-inset-top) 8px 0 14px;
+  cursor: default; -webkit-app-region: none;
+}
+body.phone .brand { font-size: 16px; }
+body.phone .icon-btn { width: 40px; height: 36px; font-size: 17px; }
+body.phone .sheet { inset: calc(46px + env(safe-area-inset-top)) 0 0 0; }
+body.phone .sheet-foot { padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+
+/* iOS odaklanınca sayfayı büyütmesin: en az 16px yazı */
+body.phone input, body.phone select, body.phone textarea { font-size: 16px; }
+
+body.phone .tabs { overflow-x: auto; scrollbar-width: none; gap: 0; }
+body.phone .tabs::-webkit-scrollbar { display: none; }
+body.phone .tabs button { flex: 1 0 auto; padding: 11px 9px 12px; font-size: 13.5px; }
+
+body.phone .item { padding: 11px 10px; }
+body.phone .mini { padding: 6px 10px; font-size: 12.5px; }
+body.phone .check { width: 24px; height: 24px; }
+body.phone .content { -webkit-overflow-scrolling: touch; }
+
+body.phone .fab { width: 54px; height: 54px; font-size: 26px; bottom: 14px; }
+body.phone .calendar { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+body.phone.cal-collapsed .calendar { padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+body.phone .toast { bottom: calc(86px + env(safe-area-inset-bottom)); }
+body.phone .splitter { height: 14px; }
+
+/* dokunmatik ekranda üzerine gelme yok: gizli düğmeler hep görünsün */
+@media (hover: none) {
+  .del-btn { opacity: .5; }
+  .card-btn { opacity: .85; }
+}
+
+/* kurulum */
+.setup-card { max-width: 340px; }
+.setup-steps { text-align: left; margin: 14px 0; font-size: 13.5px; }
+.drive-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.drive-btn {
+  display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; border-radius: 12px;
+  border: 1px solid var(--border); background: var(--surface); font-weight: 600; font-size: 15px; text-align: left;
+}
+.drive-btn:not(:disabled):active { background: var(--accent-soft); border-color: var(--accent); }
+.drive-btn small { font-weight: 500; color: var(--muted); font-size: 12px; }
+.drive-btn.soon { opacity: .55; }
+#setupView form { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
