@@ -91,7 +91,7 @@ async function flush() {
   if (!saveTimer || !db) return;
   clearTimeout(saveTimer);
   saveTimer = null;
-  try { await kasa.save(db); } catch (e) { toast('Kaydedilemedi: ' + cleanErr(e)); }
+  try { await kasa.save(db); } catch (e) { toast(_t('Kaydedilemedi: ') + cleanErr(e)); }
 }
 
 function pushReminders() {

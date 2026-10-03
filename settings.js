@@ -165,7 +165,7 @@ function languageRow(row) {
     toast(KasaI18n.tl(v === 'auto' ? KasaI18n.detect() : v, 'Dil değişti; uygulama yeniden açılıyor…'));
     await flush();
     await kasa.lock(); // sayfa yeniden yüklenecek; kasa güvenle kilitlensin
-    setTimeout(() => location.reload(), 900);
+    setTimeout(() => (kasa.reload ? kasa.reload() : location.reload()), 900);
   } },
   h('option', { value: 'auto' }, _t('Otomatik (sistem dili)')),
   h('option', { value: 'tr' }, 'Türkçe'),

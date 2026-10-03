@@ -138,7 +138,7 @@
     'Ayrı kaydet': 'Save separately', 'Mevcut kaydı güncelle': 'Update the existing entry', 'Mevcut kayıt güncellendi': 'Existing entry updated',
     'Benzer bir not var': 'A similar note exists', '“{0}” aynı başlığa ya da içeriğe sahip.': '“{0}” has the same title or content.',
     'Mevcut notu aç': 'Open the existing note', 'Bu isimde bir proje zaten var': 'A project with this name already exists',
-    '“{0}” boş olamaz': '“{0}” can’t be empty', 'Kaydedildi': 'Saved', 'Silindi': 'Deleted',
+    '“{0}” boş olamaz': '“{0}” can’t be empty', 'Kaydedildi': 'Saved', 'Kaydedilemedi: ': 'Could not save: ', 'Silindi': 'Deleted',
 
     // ---- notlarda şifre, tarayıcıdan girişler
     'Not içinden': 'From a note', '“{0}” içinde {1} giriş bilgisi buldum': ['I found {1} login in “{0}”', 'I found {1} logins in “{0}”', 1],
