@@ -27,8 +27,9 @@ window.showLock = async function (msg = '') {
   $('#lnkRestore').hidden = true;
   $('#lockHint').textContent = _t('Ana şifreni gir.');
   // Face ID kuruluysa büyük düğme (iPhone Face ID'yi yalnızca dokunuşla açar; kendiliğinden başlatılmaz)
-  $('#bioUnlock')?.remove();
   const bio = await kasa.bio.status();
+  // Kilit ekranı aynı anda iki kez çizilebilir (ör. otomatik kilit + uygulamaya dönüş): beklemeden SONRA temizle ki tek düğme kalsın
+  document.querySelectorAll('#bioUnlock').forEach((el) => el.remove());
   if (bio.enabled) {
     const b = h('button', { id: 'bioUnlock', class: 'primary bio-btn', type: 'button', onclick: () => bioUnlock(b) }, _t('{0} ile aç', bio.label));
     $('#lockForm').before(b);
@@ -232,7 +233,7 @@ window.openSettingsSheet = async function () {
     row(_t('Hızlı kilit PIN’i'), bio.enabled ? _t('{0} açıkken kullanılmaz', bio.label) : pin.hasPin ? _t('✓ Var · kilitlenince 4 haneli PIN istenir') : _t('Yok · kilitlenince ana şifre istenir'),
       ...(pin.hasPin
         ? [h('button', { class: 'mini', type: 'button', onclick: setPinFlow }, _t('Değiştir')), h('button', { class: 'mini', type: 'button', onclick: removePinFlow }, _t('Kaldır'))]
-        : [h('button', { class: 'mini primary-mini', type: 'button', onclick: setPinFlow }, _t('PIN belirle'))])),
+        : [h('button', { class: bio.enabled ? 'mini' : 'mini primary-mini', type: 'button', onclick: setPinFlow }, _t('PIN belirle'))])),
     row(_t('Otomatik kilit'), _t('Uygulamadan çıkınca da bu süre sayılır'), autoLock),
     h('p', { class: 'muted small' }, _t('PIN bu telefona özeldir. Ana şifre, kurtarma anahtarı ve yedekler bilgisayardaki Bitig’den yönetilir.')),
 
