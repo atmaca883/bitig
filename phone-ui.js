@@ -3,6 +3,8 @@
 'use strict';
 
 document.body.classList.add('phone');
+// Telefonda klavye kısayolu yok
+$('#search').placeholder = _t('Her şeyde ara…');
 
 // ---------- kilit ekranı: kurulum yoksa kurulum, varsa ana şifre ----------
 const desktopShowLock = window.showLock;
@@ -155,7 +157,7 @@ window.openSettingsSheet = async function () {
 
   const syncStatus = sy.needsReconnect ? _t('⚠ Bağlantı sona erdi; yeniden bağlanman gerekiyor')
     : sy.lastError ? '⚠ ' + sy.lastError
-    : sy.lastSync ? _t("Son eşitleme: {0}{1}", fmtStamp(sy.lastSync), sy.pending ? ' · gönderilmeyi bekleyen değişiklik var' : '') : _t('Eşitleniyor…');
+    : sy.lastSync ? _t("Son eşitleme: {0}{1}", fmtStamp(sy.lastSync), sy.pending ? _t(' · gönderilmeyi bekleyen değişiklik var') : '') : _t('Eşitleniyor…');
 
   $('#sheetForm').replaceChildren(
     section(_t('Güvenlik')),
@@ -187,7 +189,8 @@ window.openSettingsSheet = async function () {
         h('div', { class: 'title' }, d.name + (d.self ? _t(' (bu cihaz)') : '')),
         h('div', { class: 'sub' }, d.error || (d.savedAt ? _t('Son kayıt: ') + fmtStamp(d.savedAt) : _t('Henüz kaydetmedi'))))))),
 
-    section(_t('Dil')),
+    section(_t('Görünüm ve dil')),
+    themeRow(row),
     languageRow(row),
 
     section(_t('Bu telefon')),

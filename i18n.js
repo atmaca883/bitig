@@ -139,6 +139,10 @@
     'Benzer bir not var': 'A similar note exists', '“{0}” aynı başlığa ya da içeriğe sahip.': '“{0}” has the same title or content.',
     'Mevcut notu aç': 'Open the existing note', 'Bu isimde bir proje zaten var': 'A project with this name already exists',
     '“{0}” boş olamaz': '“{0}” can’t be empty', 'Kaydedildi': 'Saved', 'Kaydedilemedi: ': 'Could not save: ', 'Silindi': 'Deleted',
+    // görünüm
+    'Görünüm ve dil': 'Appearance and language', 'Tema': 'Theme', 'Açık ya da koyu görünüm': 'Light or dark appearance',
+    'Otomatik (cihaz ayarı)': 'Automatic (device setting)', 'Koyu': 'Dark', 'Açık': 'Light',
+    'Her şeyde ara…': 'Search everything…', ' · gönderilmeyi bekleyen değişiklik var': ' · changes waiting to be sent',
     // OneDrive ve genel bulut metinleri
     ' (bu cihaz)': ' (this device)',
     'Bu sürümde {0} bağlantısı tanımlı değil.': 'This version has no {0} connection configured.',

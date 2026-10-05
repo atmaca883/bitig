@@ -69,7 +69,8 @@ async function openSettingsSheet() {
 
     ...syncSection(sy, row, toggle, reopen),
 
-    section(_t('Dil')),
+    section(_t('Görünüm ve dil')),
+    themeRow(row),
     languageRow(row),
 
     section(_t('Başlangıç')),
@@ -155,6 +156,16 @@ kasa.onPaired((cl) => {
 
 // ---------- dil ----------
 // Seçim tarayıcı deposunda (arayüz açılırken okunur) ve ana süreçte (pencere/bildirim metinleri) saklanır.
+// Tema: bu cihazda saklanır, hemen uygulanır (yeniden açmaya gerek yok)
+function themeRow(row) {
+  const sel = h('select', { class: 'compact', onchange: (e) => BitigTheme.set(e.target.value) },
+    h('option', { value: 'auto' }, _t('Otomatik (cihaz ayarı)')),
+    h('option', { value: 'dark' }, _t('Koyu')),
+    h('option', { value: 'light' }, _t('Açık')));
+  sel.value = BitigTheme.get();
+  return row(_t('Tema'), _t('Açık ya da koyu görünüm'), sel);
+}
+
 function languageRow(row) {
   let saved = 'auto';
   try { saved = localStorage.getItem('bitig.lang') || 'auto'; } catch {}

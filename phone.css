@@ -20,7 +20,7 @@ body.phone input, body.phone select, body.phone textarea { font-size: 16px; }
 
 body.phone .tabs { overflow-x: auto; scrollbar-width: none; gap: 0; }
 body.phone .tabs::-webkit-scrollbar { display: none; }
-body.phone .tabs button { flex: 1 0 auto; padding: 11px 9px 12px; font-size: 13.5px; }
+body.phone .tabs button { flex: 1 0 auto; padding: 11px 6px 12px; font-size: 13.5px; }
 
 body.phone .item { padding: 11px 10px; }
 body.phone .mini { padding: 6px 10px; font-size: 12.5px; }
@@ -51,3 +51,21 @@ body.phone .splitter { height: 14px; }
 .drive-btn small { font-weight: 500; color: var(--muted); font-size: 12px; }
 .drive-btn.soon { opacity: .55; }
 #setupView form { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+
+/* ---------- kenar boşlukları: her şey ekran kenarından en az 16px içeride (yatayda çentik de hesaba katılır) ---------- */
+body.phone {
+  --gl: max(16px, env(safe-area-inset-left));
+  --gr: max(16px, env(safe-area-inset-right));
+}
+body.phone .titlebar { padding: env(safe-area-inset-top) calc(var(--gr) - 8px) 0 var(--gl); }
+body.phone .toolbar { padding: 12px var(--gr) 8px var(--gl); gap: 8px; }
+body.phone .search { min-width: 0; }
+body.phone .search input { min-width: 0; }
+body.phone #projectFilter { width: auto; max-width: 45%; min-width: 0; }
+body.phone .tabs { padding: 0 calc(var(--gr) - 6px) 0 calc(var(--gl) - 6px); scroll-padding: 0 var(--gr) 0 var(--gl); }
+body.phone .content { padding: 12px var(--gr) calc(96px + env(safe-area-inset-bottom)) var(--gl); }
+body.phone .fab { right: var(--gr); }
+body.phone .calendar { padding-left: var(--gl); padding-right: var(--gr); }
+body.phone .sheet-head { padding: 12px var(--gr) 4px calc(var(--gl) - 6px); }
+body.phone .sheet-body { padding-left: var(--gl); padding-right: var(--gr); }
+body.phone .sheet-foot { padding-left: var(--gl); padding-right: var(--gr); }
