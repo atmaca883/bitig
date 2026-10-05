@@ -14,7 +14,9 @@ window.showLock = async function (msg = '') {
     redirectChecked = true;
     const r = await kasa.phone.finishRedirect();
     if (r.error) msg = r.error;
-    else if (r.done && await kasa.vaultExists()) msg = msg || _t('Bulut bağlantısı yenilendi. Ana şifrenle aç.');
+    else if (r.done && !r.silent && await kasa.vaultExists()) msg = msg || _t('Bulut bağlantısı yenilendi. Ana şifrenle aç.');
+    // Oturumu kısa ömürlü bulutlarda (OneDrive) günde bir kez sessiz yenileme
+    if (!r.done && !r.silent && !r.error && kasa.phone.renewDriveIfNeeded()) return;
   }
   const exists = await kasa.vaultExists();
   $('#setupView')?.remove();
@@ -182,7 +184,7 @@ window.openSettingsSheet = async function () {
     h('div', { class: 'device-list' }, ...sy.devices.map((d) => h('div', { class: 'item device-row' + (d.error ? ' bad' : '') },
       h('div', { class: 'ico' }, d.platform === 'ios' || d.platform === 'android' ? '📱' : '💻'),
       h('div', { class: 'body' },
-        h('div', { class: 'title' }, d.name + (d.self ? ' (bu cihaz)' : '')),
+        h('div', { class: 'title' }, d.name + (d.self ? _t(' (bu cihaz)') : '')),
         h('div', { class: 'sub' }, d.error || (d.savedAt ? _t('Son kayıt: ') + fmtStamp(d.savedAt) : _t('Henüz kaydetmedi'))))))),
 
     section(_t('Dil')),

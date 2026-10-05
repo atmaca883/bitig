@@ -366,7 +366,17 @@
       isDriveConnected: () => !!drive()?.isConnected(),
       // Bulutun izin sayfasından dönüldüyse oturumu tamamla (sayfa açılışında bir kez çağrılır)
       async finishRedirect() {
-        try { return { done: !!(await drive()?.finishRedirect?.()) }; } catch (e) { return { error: e.message }; }
+        try {
+          const r = await drive()?.finishRedirect?.();
+          return { done: r === true || !!r?.done, silent: !!r?.silent };
+        } catch (e) { return { error: e.message }; }
+      },
+      // Bulut oturumu yakında dolacaksa sessizce tazele (sayfa kısa süre buluta gidip döner). Yönlendirme başladıysa true.
+      renewDriveIfNeeded() {
+        const d = drive();
+        if (!d?.needsRenew?.()) return false;
+        d.renew();
+        return true;
       },
       async reconnect() { if (S.dirty) await uploadOwn(); await drive()?.connect(); },
       async vaultFilesFound() { return (await listVaultFiles()).length; },

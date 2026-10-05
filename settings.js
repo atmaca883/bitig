@@ -184,7 +184,7 @@ function syncSection(sy, row, toggle, reopen) {
   const deviceRow = (d) => h('div', { class: 'item device-row' + (d.error ? ' bad' : '') },
     h('div', { class: 'ico' }, d.platform === 'ios' || d.platform === 'android' ? '📱' : '💻'),
     h('div', { class: 'body' },
-      h('div', { class: 'title' }, d.name + (d.self ? ' (bu cihaz)' : '')),
+      h('div', { class: 'title' }, d.name + (d.self ? _t(' (bu cihaz)') : '')),
       h('div', { class: 'sub' }, d.error || (d.savedAt ? _t('Son kayıt: ') + fmtStamp(d.savedAt) : _t('Henüz kaydetmedi')))),
     !d.self && h('button', { class: 'mini', type: 'button', onclick: async () => {
       if (!(await ask(_t('Cihaz listeden çıkarılsın mı?'),
@@ -201,54 +201,65 @@ function syncSection(sy, row, toggle, reopen) {
     onclick: async () => { if (provider !== p) { await kasa.sync.set({ provider: p }); reopen(); } },
   }, label);
 
-  const connectDropbox = async (btn) => {
+  // Doğrudan bağlanılan bulutlar (Dropbox, OneDrive). Bu sürümde anahtarı olmayan bulut seçeneklerde görünmez.
+  const clouds = sy.clouds || { dropbox: { label: 'Dropbox', available: sy.dropboxAvailable, email: sy.dropboxEmail } };
+  const cloud = clouds[provider];
+
+  const connectCloud = async (id, btn) => {
+    const label = clouds[id].label;
     btn.disabled = true;
-    btn.textContent = _t('Tarayıcıda Dropbox bekleniyor…');
-    toast(_t('Tarayıcıda Dropbox açıldı; izin verince buraya döner'));
+    btn.textContent = _t('Tarayıcıda {0} bekleniyor…', label);
+    toast(_t('Tarayıcıda {0} açıldı; izin verince buraya döner', label));
     try {
-      await kasa.sync.connectDropbox();
-      toast(_t('✓ Dropbox’a bağlandı'));
+      await kasa.sync.connectCloud(id);
+      toast(_t('✓ {0} hesabına bağlandı', label));
     } catch (e) {
-      toast(_t('Dropbox’a bağlanılamadı: ') + cleanErr(e));
+      toast(_t('{0} hesabına bağlanılamadı: ', label) + cleanErr(e));
     }
     reopen();
   };
 
-  const dropboxBlock = !sy.dropboxAvailable
-    ? h('p', { class: 'muted small' }, _t('Bu sürümde Dropbox bağlantısı henüz etkin değil.'))
-    : sy.dropboxEmail
-      ? h('div', { class: 'setting col' },
-        h('div', { class: 'sub' }, sy.needsReconnect ? _t('⚠ Dropbox bağlantısı sona erdi') : _t('Bağlı Dropbox hesabı')),
-        h('div', { class: 'path' }, sy.dropboxEmail + _t(' · Uygulamalar/Bitig klasörü')),
-        h('div', { class: 'group-actions' },
-          sy.needsReconnect && h('button', { class: 'mini primary-mini', type: 'button', onclick: (e) => connectDropbox(e.currentTarget) }, _t('Yeniden bağlan')),
-          !sy.needsReconnect && nowBtn,
-          h('button', { class: 'mini', type: 'button', onclick: async () => {
-            if (!(await ask(_t('Dropbox bağlantısı kesilsin mi?'), _t('Bu bilgisayar Dropbox’la eşitlemeyi bırakır. Dropbox’taki şifreli dosyalar silinmez.'),
-              [{ label: _t('Vazgeç'), value: false }, { label: _t('Bağlantıyı kes'), value: true, primary: true }]))) return;
-            await kasa.sync.disconnectDropbox();
-            reopen();
-          } }, _t('Bağlantıyı kes'))))
-      : h('div', { class: 'setting col' },
-        h('div', { class: 'sub' }, _t('Bitig, Dropbox’ında sadece kendine ait “Uygulamalar/Bitig” klasörünü kullanır; diğer dosyalarını göremez.')),
-        h('button', { class: 'primary', type: 'button', onclick: (e) => connectDropbox(e.currentTarget) }, _t('Dropbox’a bağlan')));
+  const cloudBlock = (id) => {
+    const c = clouds[id];
+    if (!c.available) return h('p', { class: 'muted small' }, _t('Bu sürümde {0} bağlantısı henüz etkin değil.', c.label));
+    if (!c.email) {
+      return h('div', { class: 'setting col' },
+        h('div', { class: 'sub' }, _t('Bitig, {0} hesabında sadece kendine ait “Uygulamalar/Bitig” klasörünü kullanır; diğer dosyalarını göremez.', c.label)),
+        h('button', { class: 'primary', type: 'button', onclick: (e) => connectCloud(id, e.currentTarget) }, _t('{0} hesabına bağlan', c.label)));
+    }
+    return h('div', { class: 'setting col' },
+      h('div', { class: 'sub' }, sy.needsReconnect ? _t('⚠ {0} bağlantısı sona erdi', c.label) : _t('Bağlı {0} hesabı', c.label)),
+      h('div', { class: 'path' }, c.email + _t(' · Uygulamalar/Bitig klasörü')),
+      h('div', { class: 'group-actions' },
+        sy.needsReconnect && h('button', { class: 'mini primary-mini', type: 'button', onclick: (e) => connectCloud(id, e.currentTarget) }, _t('Yeniden bağlan')),
+        !sy.needsReconnect && nowBtn,
+        h('button', { class: 'mini', type: 'button', onclick: async () => {
+          if (!(await ask(_t('{0} bağlantısı kesilsin mi?', c.label), _t('Bu bilgisayar {0} ile eşitlemeyi bırakır. {0} içindeki şifreli dosyalar silinmez.', c.label),
+            [{ label: _t('Vazgeç'), value: false }, { label: _t('Bağlantıyı kes'), value: true, primary: true }]))) return;
+          await kasa.sync.disconnectCloud(id);
+          reopen();
+        } }, _t('Bağlantıyı kes'))));
+  };
 
   const folderBlock = h('div', { class: 'setting col' },
-    h('div', { class: 'sub' }, _t('Eşitleme klasörü (OneDrive, Google Drive ya da Dropbox masaüstü programının klasörü)')),
+    h('div', { class: 'sub' }, _t('Eşitleme klasörü (OneDrive, Google Drive, iCloud ya da Dropbox masaüstü programının klasörü)')),
     h('div', { class: 'path' }, sy.dir),
     h('div', { class: 'group-actions' },
       h('button', { class: 'mini', type: 'button', onclick: async () => { await kasa.sync.chooseDir(); reopen(); } }, _t('Değiştir')),
       h('button', { class: 'mini', type: 'button', onclick: () => kasa.sync.openDir() }, _t('Klasörü aç')),
       nowBtn));
 
+  const cloudNames = Object.entries(clouds).filter(([id, c]) => c.available || id === provider).map(([, c]) => c.label);
   return [
     section(_t('Cihazlar arası eşitleme')),
     row(_t('Eşitleme'), status,
       toggle(sy.enabled, async (v) => { await kasa.sync.set({ enabled: v }); toast(v ? _t('Eşitleme açıldı') : _t('Eşitleme kapatıldı')); reopen(); })),
     sy.enabled && h('div', { class: 'setting col' },
       h('div', { class: 'sub' }, _t('Eşitleme yeri')),
-      h('div', { class: 'segmented' }, choose('dropbox', 'Dropbox'), choose('folder', _t('Klasör')))),
-    sy.enabled && (provider === 'dropbox' ? dropboxBlock : folderBlock),
+      h('div', { class: 'segmented' },
+        ...Object.entries(clouds).filter(([id, c]) => c.available || id === provider).map(([id, c]) => choose(id, c.label)),
+        choose('folder', _t('Klasör')))),
+    sy.enabled && (cloud ? cloudBlock(provider) : folderBlock),
     sy.enabled && row(_t('Bu cihazın adı'), sy.deviceName,
       h('button', { class: 'mini', type: 'button', onclick: async () => {
         let name = '';
@@ -262,8 +273,8 @@ function syncSection(sy, row, toggle, reopen) {
     sy.enabled && h('div', { class: 'device-list' }, ...sy.devices.map(deviceRow)),
     h('p', { class: 'muted small' }, !sy.enabled
       ? _t('Açınca kasan şifreli olarak buluta da yazılır; telefonun ve diğer bilgisayarların değişiklikleri buradan birleşir.')
-      : provider === 'dropbox'
-        ? (others.length ? '' : _t('Henüz başka cihaz yok. ')) + _t('Telefonda Bitig’i kurarken Dropbox’ı seç. Her cihaz kendi şifreli dosyasını yazar; Dropbox içeriği göremez.')
-        : _t('Klasör yolu yalnızca bilgisayarlar arasında çalışır. Telefonla eşitlemek için Dropbox’ı seç.')),
+      : cloud
+        ? (others.length ? '' : _t('Henüz başka cihaz yok. ')) + _t('Telefonda Bitig’i kurarken {0} seçeneğini seç. Her cihaz kendi şifreli dosyasını yazar; {0} içeriği göremez.', cloud.label)
+        : _t('Klasör yolu yalnızca bilgisayarlar arasında çalışır. Telefonla eşitlemek için şunlardan birini seç: {0}.', cloudNames.join(', '))),
   ].filter(Boolean);
 }
