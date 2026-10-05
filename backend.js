@@ -32,6 +32,7 @@
   const S = {
     dek: null, wraps: null, data: null,
     pinRecord: null, pinLocked: false, pinFails: 0,
+    bioRec: null, // Face ID kaydı: bellekte hazır durur ki dokunuştan sonra araya bekleme girmesin (iPhone izni düşürür)
     remotes: new Map(), lastSync: null, lastUpload: null, lastError: '',
     dirty: false, uploadTimer: null, pollTimer: null, syncing: null,
   };
@@ -57,7 +58,7 @@
 
   function clearSession() {
     stopSync();
-    Object.assign(S, { dek: null, wraps: null, data: null, pinRecord: null, pinLocked: false, pinFails: 0, primed: false });
+    Object.assign(S, { dek: null, wraps: null, data: null, pinRecord: null, pinLocked: false, pinFails: 0, primed: false, bioPending: null, bioAuthUntil: 0 });
     S.remotes.clear();
   }
 
@@ -212,6 +213,22 @@
     return unlockedResult();
   }
 
+  // Veri anahtarı elde edildikten sonra (ana şifre ya da Face ID) kasayı aç
+  async function openWithKey(dek, file) {
+    const data = await C.openJson(dek, file.box);
+    let pinRecord = null;
+    try { if (file.wraps.pinBox) pinRecord = await C.openJson(dek, file.wraps.pinBox); } catch {}
+    Object.assign(S, { dek, wraps: syncWraps(file.wraps), data, pinRecord, pinLocked: false, pinFails: 0 });
+    return unlockedResult();
+  }
+
+  async function saveBio(pending, prf) {
+    S.bioRec = await root.KasaBio.seal(S.dek, pending, prf);
+    await Store.set('bio', S.bioRec);
+    S.bioPending = null;
+    S.bioAuthUntil = 0;
+  }
+
   async function verifyPassword(password) {
     if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
     try { await C.unwrapKey(S.wraps.password, password); } catch { await slowDown(); throw new Error(_t('Mevcut ana şifre yanlış.')); }
@@ -221,6 +238,8 @@
     throw new Error(_t("{0} bilgisayardaki Bitig’den yapılır; telefon değişikliği eşitlemeyle otomatik alır.", what));
   };
 
+  Store.get('bio').then((r) => { S.bioRec = r || null; }).catch(() => {});
+
   // ---------- arayüzün beklediği API ----------
   root.kasa = {
     vaultExists: async () => !!(await Store.get('vault')),
@@ -229,11 +248,7 @@
       const file = await Store.get('vault');
       let dek;
       try { dek = await C.unwrapKey(file.wraps.password, password); } catch { await slowDown(); throw new Error(_t('Ana şifre yanlış.')); }
-      const data = await C.openJson(dek, file.box);
-      let pinRecord = null;
-      try { if (file.wraps.pinBox) pinRecord = await C.openJson(dek, file.wraps.pinBox); } catch {}
-      Object.assign(S, { dek, wraps: syncWraps(file.wraps), data, pinRecord, pinLocked: false, pinFails: 0 });
-      return unlockedResult();
+      return openWithKey(dek, file);
     },
     async save(data) {
       if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
@@ -246,7 +261,8 @@
     async lock() { if (S.dirty) await uploadOwn(); clearSession(); return true; },
     async quickLock() {
       if (!S.dek) return 'full';
-      if (!S.pinRecord) { if (S.dirty) await uploadOwn(); clearSession(); return 'full'; }
+      // Face ID açıksa anahtarı bellekte tutmaya gerek yok: tam kilitle, kilit ekranında Face ID ile açılır
+      if (!S.pinRecord || S.bioRec) { if (S.dirty) await uploadOwn(); clearSession(); return 'full'; }
       S.pinLocked = true;
       S.pinFails = 0;
       return 'pin';
@@ -278,6 +294,49 @@
         S.pinRecord = null;
         await persistLocal();
         return true;
+      },
+    },
+    // Face ID / Touch ID / parmak izi (telefona özel; kayıt yalnızca bu cihazda durur, eşitlenmez)
+    bio: {
+      async status() {
+        S.bioRec = (await Store.get('bio')) || null;
+        const enabled = !!S.bioRec;
+        return { label: root.KasaBio.label(), enabled, available: enabled || await root.KasaBio.supported() };
+      },
+      // Kurulum iki adımlı: önce ana şifre (verify), sonra ayrı bir dokunuşla Face ID (enroll).
+      // iPhone, Face ID'yi yalnızca doğrudan bir dokunuşa yanıt olarak açar; şifre kontrolü araya girerse izin düşer.
+      async verify(password) {
+        await verifyPassword(password);
+        S.bioAuthUntil = Date.now() + 3 * 60_000;
+        return true;
+      },
+      // Dönen: { done: true } ya da { needConfirm: true } (cihaz sırrı oluştururken vermediyse bir onay daha)
+      async enroll() {
+        if (!S.dek || S.pinLocked || !(S.bioAuthUntil > Date.now())) throw new Error(_t('Önce ana şifreni gir.'));
+        const pending = await root.KasaBio.create(settings.deviceName);
+        if (!pending.prf) { S.bioPending = pending; return { needConfirm: true }; }
+        await saveBio(pending, pending.prf);
+        return { done: true };
+      },
+      async confirm() {
+        if (!S.dek || !S.bioPending) throw new Error(_t('Önce ana şifreni gir.'));
+        await saveBio(S.bioPending, await root.KasaBio.prfFor(S.bioPending));
+        return { done: true };
+      },
+      async disable() {
+        await Store.del('bio');
+        S.bioRec = null;
+        return true;
+      },
+      // Dokunuşun içinde çağrılır: kayıt bellekte olduğu için Face ID isteği hemen gider
+      unlock() {
+        const rec = S.bioRec;
+        if (!rec) return Promise.reject(new Error(_t('{0} ile açma kurulu değil.', root.KasaBio.label())));
+        return root.KasaBio.open(rec).then(async (dek) => {
+          const file = await Store.get('vault');
+          if (!file) throw new Error(_t('Bitig kilitli.'));
+          return openWithKey(dek, file);
+        });
       },
     },
     recover: onlyOnComputer(_t('Kurtarma anahtarıyla yeni ana şifre belirlemek')),
@@ -384,6 +443,7 @@
       async reset() {
         clearSession();
         await Store.clear();
+        S.bioRec = null;
         await drive()?.disconnect?.();
         localStorage.removeItem(SETTINGS_KEY);
         settings = loadSettings();

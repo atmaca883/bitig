@@ -69,3 +69,6 @@ body.phone .calendar { padding-left: var(--gl); padding-right: var(--gr); }
 body.phone .sheet-head { padding: 12px var(--gr) 4px calc(var(--gl) - 6px); }
 body.phone .sheet-body { padding-left: var(--gl); padding-right: var(--gr); }
 body.phone .sheet-foot { padding-left: var(--gl); padding-right: var(--gr); }
+
+/* Face ID ile aç */
+.bio-btn { width: 100%; margin: 6px 0 12px; padding: 13px; font-size: 16px; font-weight: 600; }

@@ -26,7 +26,25 @@ window.showLock = async function (msg = '') {
   await desktopShowLock(msg);
   $('#lnkRestore').hidden = true;
   $('#lockHint').textContent = _t('Ana şifreni gir.');
+  // Face ID kuruluysa büyük düğme (iPhone Face ID'yi yalnızca dokunuşla açar; kendiliğinden başlatılmaz)
+  $('#bioUnlock')?.remove();
+  const bio = await kasa.bio.status();
+  if (bio.enabled) {
+    const b = h('button', { id: 'bioUnlock', class: 'primary bio-btn', type: 'button', onclick: () => bioUnlock(b) }, _t('{0} ile aç', bio.label));
+    $('#lockForm').before(b);
+    $('#lockHint').textContent = _t('{0} ile aç ya da ana şifreni gir.', bio.label);
+    $('#pw1').blur(); // klavye açılıp düğmeyi örtmesin
+  }
 };
+
+function bioUnlock(btn) {
+  $('#lockError').textContent = '';
+  btn.disabled = true;
+  kasa.bio.unlock() // dokunuşun içinde, beklemeden çağrılır
+    .then((res) => acceptVault(res))
+    .catch((e) => { if (!e?.cancelled) $('#lockError').textContent = cleanErr(e); })
+    .finally(() => { btn.disabled = false; });
+}
 
 // Telefonda "unuttum": kurtarma bilgisayardan yapılır
 (() => {
@@ -121,6 +139,13 @@ async function showSetupPassword(msg = '') {
           $('#setupView')?.remove();
           acceptVault(res);
           toast(_t('Bitig bu telefona kuruldu ✓'));
+          kasa.bio.status().then((b) => {
+            if (b.available && !b.enabled) addPrompt({
+              key: 'bio', icon: '🔐', title: _t('{0} ile açmak ister misin?', b.label),
+              sub: _t('Her seferinde ana şifre yazmadan, {0} ile açılır.', b.label),
+              actions: [{ label: _t('Kur'), primary: true, fn: () => openSettingsSheet() }, { label: _t('Sonra') }],
+            });
+          });
         } catch (ex) {
           err.textContent = cleanErr(ex);
           input.select();
@@ -142,10 +167,52 @@ window.showMain = function () {
   desktopShowMain();
 };
 
+// ---------- Face ID / parmak izi ----------
+// Kurulum adımları ayrı dokunuşlarla: şifre → "Şimdi kur" → (gerekirse) "Onayla".
+let bioStep = '';
+function bioRow(bio, row, reopen) {
+  const L = bio.label;
+  const run = (p) => p
+    .then((r) => {
+      if (r?.needConfirm) { bioStep = 'confirm'; toast(_t('Son adım: bir kez daha onayla')); }
+      else { bioStep = ''; toast(_t('✓ {0} ile açma kuruldu', L)); }
+      reopen();
+    })
+    .catch((e) => { if (!e?.cancelled) toast(cleanErr(e)); if (bioStep === 'confirm') bioStep = ''; reopen(); });
+  if (bio.enabled) {
+    return row(_t('{0} ile aç', L), _t('✓ Açık · Bitig kilit ekranında {0} ile açılır', L),
+      h('button', { class: 'mini', type: 'button', onclick: async () => {
+        if (!(await ask(_t('{0} ile açma kapatılsın mı?', L), _t('Bundan sonra Bitig’i ana şifrenle açarsın. İstediğin zaman yeniden kurabilirsin.'),
+          [{ label: _t('Vazgeç'), value: false }, { label: _t('Kaldır'), value: true, primary: true }]))) return;
+        await kasa.bio.disable();
+        toast(_t('{0} ile açma kapatıldı', L));
+        reopen();
+      } }, _t('Kaldır')));
+  }
+  if (bioStep === 'ready') {
+    return row(_t('{0} ile aç', L), _t('Şifre doğru. Şimdi {0} onayını ver.', L),
+      h('button', { class: 'mini primary-mini', type: 'button', onclick: () => run(kasa.bio.enroll()) }, _t('Şimdi kur')));
+  }
+  if (bioStep === 'confirm') {
+    return row(_t('{0} ile aç', L), _t('Son adım: bir kez daha onayla.'),
+      h('button', { class: 'mini primary-mini', type: 'button', onclick: () => run(kasa.bio.confirm()) }, _t('Onayla')));
+  }
+  return row(_t('{0} ile aç', L), _t('Kapalı · Bitig’i ana şifre yazmadan, {0} ile aç', L),
+    h('button', { class: 'mini primary-mini', type: 'button', onclick: async () => {
+      const ok = await formDialog({
+        title: _t('{0} ile aç', L),
+        text: _t('Kurmak için önce ana şifreni gir. Anahtar yalnızca bu telefonda saklanır; ana şifren her zaman çalışmaya devam eder.'),
+        fields: [{ k: 'pw', label: _t('Ana şifre') }], submitLabel: _t('Devam'),
+        onSubmit: async (v) => { await kasa.bio.verify(v.pw); },
+      });
+      if (ok) { bioStep = 'ready'; reopen(); }
+    } }, _t('Kur')));
+}
+
 // ---------- telefon ayarları ----------
 window.openSettingsSheet = async function () {
   editing = null;
-  const [st, pin, sy] = await Promise.all([kasa.settings.get(), kasa.pin.status(), kasa.sync.status()]);
+  const [st, pin, sy, bio] = await Promise.all([kasa.settings.get(), kasa.pin.status(), kasa.sync.status(), kasa.bio.status()]);
   const reopen = () => openSettingsSheet();
   const row = (title, sub, ...side) => h('div', { class: 'setting' },
     h('div', { class: 'body' }, h('div', { class: 'title' }, title), sub && h('div', { class: 'sub' }, sub)), ...side);
@@ -161,7 +228,8 @@ window.openSettingsSheet = async function () {
 
   $('#sheetForm').replaceChildren(
     section(_t('Güvenlik')),
-    row(_t('Hızlı kilit PIN’i'), pin.hasPin ? _t('✓ Var · kilitlenince 4 haneli PIN istenir') : _t('Yok · kilitlenince ana şifre istenir'),
+    bio.available && bioRow(bio, row, reopen),
+    row(_t('Hızlı kilit PIN’i'), bio.enabled ? _t('{0} açıkken kullanılmaz', bio.label) : pin.hasPin ? _t('✓ Var · kilitlenince 4 haneli PIN istenir') : _t('Yok · kilitlenince ana şifre istenir'),
       ...(pin.hasPin
         ? [h('button', { class: 'mini', type: 'button', onclick: setPinFlow }, _t('Değiştir')), h('button', { class: 'mini', type: 'button', onclick: removePinFlow }, _t('Kaldır'))]
         : [h('button', { class: 'mini primary-mini', type: 'button', onclick: setPinFlow }, _t('PIN belirle'))])),
