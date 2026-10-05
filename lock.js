@@ -27,6 +27,31 @@ async function showLock(msg = '') {
   $('#pw2').value = '';
   $('#lockError').textContent = msg;
   $('#pw1').focus();
+  if (vaultExists && kasa.hello) {
+    const st = await kasa.hello.status().catch(() => null);
+    // Kilit ekranı aynı anda iki kez çizilebilir: beklemeden sonra temizle ki tek düğme kalsın
+    document.querySelectorAll('#helloUnlock').forEach((el) => el.remove());
+    if (st?.enabled && !$('#lockView').hidden) {
+      const b = h('button', { id: 'helloUnlock', class: 'primary bio-btn', type: 'button', onclick: () => helloUnlock(b) }, _t('{0} ile aç', st.label));
+      $('#lockForm').before(b);
+      $('#lockHint').textContent = _t('{0} ile aç ya da ana şifreni gir.', st.label);
+    }
+  }
+}
+
+async function helloUnlock(btn) {
+  const label = btn.textContent;
+  $('#lockError').textContent = '';
+  btn.disabled = true;
+  btn.textContent = _t('Windows Hello bekleniyor…');
+  try {
+    acceptVault(await kasa.hello.unlock());
+  } catch (e) {
+    $('#lockError').textContent = cleanErr(e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
 }
 
 $('#lockForm').addEventListener('submit', async (e) => {

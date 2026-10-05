@@ -5,7 +5,8 @@
 async function openSettingsSheet() {
   editing = null;
   clearInterval(pairTimer);
-  const [st, info, pin, sy] = await Promise.all([kasa.settings.get(), kasa.info(), kasa.pin.status(), kasa.sync.status()]);
+  const [st, info, pin, sy, hel] = await Promise.all([kasa.settings.get(), kasa.info(), kasa.pin.status(), kasa.sync.status(),
+    kasa.hello ? kasa.hello.status().catch(() => null) : null]);
   const b = st.backup;
   const reopen = () => openSettingsSheet();
   const toggle = (checked, onchange) => {
@@ -26,8 +27,9 @@ async function openSettingsSheet() {
       h('button', { class: 'mini', type: 'button', onclick: createRecoveryFlow }, info.hasRecovery ? _t('Yenisini oluştur') : _t('Oluştur'))),
     row(_t('Ana şifre'), _t('Kasayı açan şifre'),
       h('button', { class: 'mini', type: 'button', onclick: changePasswordFlow }, _t('Değiştir'))),
+    hel?.available && helloRow(hel, row, reopen),
     row(_t('Hızlı kilit PIN\'i'),
-      pin.hasPin ? _t('✓ Var · kilitlenince 4 haneli PIN istenir') : _t('Yok · kilitlenince ana şifre istenir'),
+      hel?.enabled ? _t('{0} açıkken kullanılmaz', hel.label) : pin.hasPin ? _t('✓ Var · kilitlenince 4 haneli PIN istenir') : _t('Yok · kilitlenince ana şifre istenir'),
       ...(pin.hasPin
         ? [h('button', { class: 'mini', type: 'button', onclick: setPinFlow }, _t('Değiştir')),
           h('button', { class: 'mini', type: 'button', onclick: removePinFlow }, _t('Kaldır'))]
@@ -156,6 +158,31 @@ kasa.onPaired((cl) => {
 
 // ---------- dil ----------
 // Seçim tarayıcı deposunda (arayüz açılırken okunur) ve ana süreçte (pencere/bildirim metinleri) saklanır.
+// Windows Hello (yüz, parmak izi ya da Windows PIN'i) ile açma
+function helloRow(hel, row, reopen) {
+  const L = hel.label;
+  if (hel.enabled) {
+    return row(_t('{0} ile aç', L), _t('✓ Açık · Bitig kilit ekranında {0} ile açılır', L),
+      h('button', { class: 'mini', type: 'button', onclick: async () => {
+        if (!(await ask(_t('{0} ile açma kapatılsın mı?', L), _t('Bundan sonra Bitig’i ana şifrenle açarsın. İstediğin zaman yeniden kurabilirsin.'),
+          [{ label: _t('Vazgeç'), value: false }, { label: _t('Kaldır'), value: true, primary: true }]))) return;
+        await kasa.hello.disable();
+        toast(_t('{0} ile açma kapatıldı', L));
+        reopen();
+      } }, _t('Kaldır')));
+  }
+  return row(_t('{0} ile aç', L), _t('Kapalı · yüz, parmak izi ya da Windows PIN’inle aç'),
+    h('button', { class: 'mini primary-mini', type: 'button', onclick: async () => {
+      const ok = await formDialog({
+        title: _t('{0} ile aç', L),
+        text: _t('Kurmak için önce ana şifreni gir. Sonra Windows Hello onayı istenir. Anahtar yalnızca bu bilgisayarda saklanır; ana şifren her zaman çalışmaya devam eder.'),
+        fields: [{ k: 'pw', label: _t('Ana şifre') }], submitLabel: _t('Devam'),
+        onSubmit: async (v) => { await kasa.hello.enable(v.pw); },
+      });
+      if (ok) { toast(_t('✓ {0} ile açma kuruldu', L)); reopen(); }
+    } }, _t('Kur')));
+}
+
 // Tema: bu cihazda saklanır, hemen uygulanır (yeniden açmaya gerek yok)
 function themeRow(row) {
   const sel = h('select', { class: 'compact', onchange: (e) => BitigTheme.set(e.target.value) },
