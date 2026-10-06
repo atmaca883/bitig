@@ -40,6 +40,26 @@ const FORMS = {
   },
 };
 
+// Şifre yazılırken güç göstergesi ve "bu şifre başka kayıtta da var" uyarısı
+const STRENGTH_LABELS = () => [_t('Çok zayıf'), _t('Zayıf'), _t('Orta'), _t('Güçlü'), _t('Çok güçlü')];
+function strengthMeter(input) {
+  const label = h('span');
+  const meter = h('div', { class: 'pw-meter', hidden: true }, h('i'), label);
+  const update = () => {
+    const v = input.value;
+    meter.hidden = !v;
+    if (!v) return;
+    const val = (k) => $(`#sheetForm [data-k="${k}"]`)?.value || '';
+    const s = KasaStrength.strength(v, { username: val('username'), title: val('title'), url: val('url') });
+    const others = db.passwords.filter((p) => p !== editing?.item && p.password === v).length;
+    meter.dataset.score = s.score;
+    label.textContent = STRENGTH_LABELS()[s.score] + (others ? ' · ' + _t('bu şifre {0} başka kayıtta da var', others) : '');
+  };
+  input.addEventListener('input', update);
+  setTimeout(update);
+  return meter;
+}
+
 function buildField(f, value) {
   const label = h('label', { class: f.grow ? 'grow' : null }, f.label);
   let input;
@@ -74,9 +94,10 @@ function buildField(f, value) {
       h('button', { type: 'button', class: 'mini', title: _t('Göster / gizle'),
         onclick: () => { input.type = input.type === 'password' ? 'text' : 'password'; } }, '👁'),
       h('button', { type: 'button', class: 'mini', title: _t('Güçlü şifre üret'),
-        onclick: () => { input.value = generatePassword(); input.type = 'text'; } }, '🎲'),
+        onclick: () => { input.value = generatePassword(); input.type = 'text'; input.dispatchEvent(new Event('input')); } }, '🎲'),
       h('button', { type: 'button', class: 'mini', title: _t('Kopyala'),
-        onclick: () => { if (input.value) { kasa.copy(input.value, true); toast(_t('Şifre kopyalandı · 30 sn sonra silinecek')); } } }, '⧉')));
+        onclick: () => { if (input.value) { kasa.copy(input.value, true); toast(_t('Şifre kopyalandı · 30 sn sonra silinecek')); } } }, '⧉')),
+      strengthMeter(input));
   } else {
     input = h('input', { type: f.type, 'data-k': f.k, placeholder: f.ph || '', autocomplete: 'off' });
     input.value = value || '';

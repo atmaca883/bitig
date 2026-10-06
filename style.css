@@ -589,3 +589,17 @@ select.compact { width: auto; padding: 5px 8px; }
 .import-help div { display: flex; flex-direction: column; gap: 1px; }
 .import-help b { font-size: 12.5px; }
 .import-help span { color: var(--muted); }
+
+/* şifre sağlığı */
+.chip.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.item.health-link.danger { border-color: var(--danger); }
+.group.danger { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+.pw-meter { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 11.5px; font-weight: 500; color: var(--muted); }
+.pw-meter[hidden] { display: none; }
+.pw-meter i { flex: none; width: 84px; height: 5px; border-radius: 3px; background: var(--border); position: relative; overflow: hidden; }
+.pw-meter i::after { content: ''; position: absolute; inset: 0 auto 0 0; width: var(--w, 0%); background: var(--c, var(--danger)); border-radius: 3px; transition: width .15s; }
+.pw-meter[data-score="0"] i::after { --w: 15%; --c: var(--danger); }
+.pw-meter[data-score="1"] i::after { --w: 35%; --c: var(--danger); }
+.pw-meter[data-score="2"] i::after { --w: 60%; --c: var(--warn); }
+.pw-meter[data-score="3"] i::after { --w: 82%; --c: var(--ok); }
+.pw-meter[data-score="4"] i::after { --w: 100%; --c: var(--ok); }

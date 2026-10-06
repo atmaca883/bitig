@@ -35,7 +35,7 @@ function passwordRow(p, { hideProject = false } = {}) {
     h('div', { class: 'body' },
       h('div', { class: 'title' }, p.title),
       h('div', { class: 'sub' }, p.username || p.url || '—'),
-      h('div', { class: 'chips' }, stampChip(p), !hideProject && projectChip(p.projectId))),
+      h('div', { class: 'chips' }, ...healthChips(p), stampChip(p), !hideProject && projectChip(p.projectId))),
     h('div', { class: 'side' },
       p.username && h('button', { class: 'mini', title: _t('Kullanıcı adını kopyala'),
         onclick: stop(() => { kasa.copy(p.username); toast(_t('Kullanıcı adı kopyalandı')); }) }, '@'),

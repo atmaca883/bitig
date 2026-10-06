@@ -354,6 +354,12 @@
       return p;
     },
     deleteImportFile: async () => false,
+    async hibpRange(prefix) {
+      if (!/^[0-9A-F]{5}$/.test(String(prefix))) throw new Error('önek');
+      const r = await fetch('https://api.pwnedpasswords.com/range/' + prefix, { headers: { 'Add-Padding': 'true' }, cache: 'no-store' });
+      if (!r.ok) throw new Error(_t('Sızıntı servisine ulaşılamadı (') + r.status + ')');
+      return r.text();
+    },
     verifyPassword: async (password) => { await verifyPassword(password); return true; },
     async exportSave(name, text, type = 'text/plain') {
       const url = URL.createObjectURL(new Blob([text], { type: type + ';charset=utf-8' }));

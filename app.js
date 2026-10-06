@@ -73,6 +73,7 @@ kasa.onMerged(({ data, changes, from }) => {
 
 function render() {
   if (!db) return;
+  pwHealthMemo = null; // şifre sağlığı analizi bu çizim için yeniden hesaplansın
   renderProjectFilter();
   for (const b of document.querySelectorAll('#tabs button')) b.classList.toggle('active', b.dataset.view === view && !query && !selectedDay);
   const c = $('#content');

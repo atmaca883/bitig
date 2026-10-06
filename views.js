@@ -27,6 +27,12 @@ const VIEWS = {
     const list = db.passwords.filter(inFilter).sort((a, b) => a.title.localeCompare(b.title, 'tr'));
     if (!list.length) return c.append(empty('🔑', _t('Henüz şifre yok. ＋ ile ekle.')),
       h('div', { class: 'footer-actions' }, h('button', { class: 'mini primary-mini', type: 'button', onclick: () => importFlow() }, _t('Başka yerden içe aktar'))));
+    const s = pwHealth().sum;
+    const bad = s.leaked || s.weak || s.reused;
+    c.append(h('div', { class: 'item health-link' + (s.leaked ? ' danger' : ''), onclick: () => openHealth() },
+      h('div', { class: 'ico' }, s.leaked ? '⚠️' : bad ? '🛡' : '✅'),
+      h('div', { class: 'body' }, h('div', { class: 'title' }, _t('Şifre sağlığı')), h('div', { class: 'sub' }, healthSummaryText(s))),
+      h('span', { class: 'muted' }, '›')));
     c.append(...list.map((x) => passwordRow(x)));
   },
 
@@ -94,7 +100,32 @@ const VIEWS = {
       h('button', { class: 'icon-btn', title: _t('Geri'), onclick: () => { view = healthReturn; render(); } }, '←'),
       h('h3', null, '🛡 Kontrol')));
 
-    if (!r.fixable && !r.reused.length) {
+    const ph = pwHealth();
+    const pick = (pred) => db.passwords.filter((p) => { const x = ph.map.get(p.id); return x && pred(x); });
+    const leaked = pick((x) => x.leaked);
+    const weak = pick((x) => x.weak && !x.leaked);
+    const old = pick((x) => x.old && !x.weak && !x.leaked);
+    if (db.passwords.length) {
+      const at = db.prefs?.breachCheckAt;
+      c.append(section(_t('Şifre sağlığı')),
+        h('div', { class: 'setting col' },
+          h('div', { class: 'sub' }, healthSummaryText(ph.sum)),
+          h('div', { class: 'sub' }, at ? _t('Son sızıntı kontrolü: {0}', fmtStamp(at)) : _t('Sızıntı kontrolü hiç yapılmadı.')),
+          h('div', { class: 'group-actions' },
+            h('button', { class: 'mini primary-mini', type: 'button', onclick: (e) => runBreachCheck(e.currentTarget) }, _t('Sızıntı kontrolü yap')))));
+    }
+    if (leaked.length) {
+      c.append(section(_t('Sızıntılarda görülen şifreler'), leaked.length),
+        h('div', { class: 'muted small', style: 'padding:0 4px 6px' }, _t('Bu şifreler bilinen veri sızıntılarında görüldü; saldırganlar ilk bunları dener. Hemen değiştir.')),
+        h('div', { class: 'group danger' }, ...leaked.map((p) => passwordRow(p))));
+    }
+    if (weak.length) {
+      c.append(section(_t('Zayıf şifreler'), weak.length),
+        h('div', { class: 'muted small', style: 'padding:0 4px 6px' }, _t('Kısa, yaygın ya da tahmin edilebilir. Değiştirirken 🎲 ile güçlü şifre üretebilirsin.')),
+        h('div', { class: 'group warn' }, ...weak.map((p) => passwordRow(p))));
+    }
+
+    if (!r.fixable && !r.reused.length && !leaked.length && !weak.length && !old.length) {
       return c.append(empty('✅', _t('Her şey temiz: tekrarlı kayıt ya da notlarda unutulmuş şifre yok.')));
     }
 
@@ -141,6 +172,11 @@ const VIEWS = {
         _t('Bir site ele geçirilirse aynı şifreli diğer hesaplar da risk altına girer. Bunların şifresini değiştirmen önerilir.')));
       for (const g of r.reused) c.append(h('div', { class: 'group warn' }, ...g.map((p) => passwordRow(p))));
     }
+    if (old.length) {
+      c.append(section(_t('Bir yıldan uzun süredir değişmeyenler'), old.length),
+        h('div', { class: 'muted small', style: 'padding:0 4px 6px' }, _t('Önemli hesaplarda (e-posta, banka) şifreyi ara sıra yenilemek iyi olur.')),
+        ...old.map((p) => passwordRow(p)));
+    }
   },
 };
 
@@ -149,12 +185,12 @@ const VIEWS = {
 const TODAY_CARDS = {
   health: {
     title: _t('Kontrol uyarısı'), bare: true,
-    data: () => healthReport().fixable || null,
+    data: () => healthReport().fixable + pwHealth().sum.leaked || null,
     render: (n) => h('div', { class: 'item health-link', onclick: () => openHealth() },
       h('div', { class: 'ico' }, '🛡'),
       h('div', { class: 'body' },
-        h('div', { class: 'title' }, `${n} konu kontrol bekliyor`),
-        h('div', { class: 'sub' }, _t('Tekrarlı kayıtlar ya da notlarda unutulmuş şifreler'))),
+        h('div', { class: 'title' }, _t('{0} konu kontrol bekliyor', n)),
+        h('div', { class: 'sub' }, _t('Sızmış şifreler, tekrarlı kayıtlar ya da notlarda unutulmuş şifreler'))),
       h('span', { class: 'muted' }, '›')),
   },
   quick: {
@@ -283,6 +319,47 @@ function openHealth() {
   $('#search').value = '';
   render();
   $('#content').scrollTop = 0;
+}
+
+// ---------- şifre sağlığı ----------
+let pwHealthMemo = null;
+const pwHealth = () => (pwHealthMemo ||= KasaStrength.analyze(db.passwords));
+
+function healthChips(p) {
+  const x = pwHealth().map.get(p.id);
+  if (!x) return [];
+  return [
+    x.leaked && h('span', { class: 'chip late', title: _t('{0} kez veri sızıntılarında görüldü', x.leaked) }, _t('⚠ Sızmış')),
+    x.weak && h('span', { class: 'chip warn' }, _t('Zayıf')),
+    x.reused && h('span', { class: 'chip warn', title: _t('Aynı şifre {0} başka kayıtta da var', x.reused) }, _t('Tekrar ×{0}', x.reused + 1)),
+  ].filter(Boolean);
+}
+
+function healthSummaryText(s) {
+  const parts = [s.leaked && _t('{0} sızmış', s.leaked), s.weak && _t('{0} zayıf', s.weak),
+    s.reused && _t('{0} tekrar', s.reused), s.old && _t('{0} eski', s.old)].filter(Boolean);
+  return parts.length ? parts.join(' · ') : s.unchecked ? _t('Sorun yok · sızıntı kontrolü yapılmadı') : _t('✓ Sorun yok');
+}
+
+async function runBreachCheck(btn) {
+  if (!(await ask(_t('Sızıntı kontrolü'),
+    _t('Şifrelerin, bilinen veri sızıntılarındaki milyarlarca şifreyle karşılaştırılır (Have I Been Pwned). Şifrenin kendisi ya da tam parmak izi gönderilmez: yalnızca parmak izinin ilk 5 karakteri gider, eşleştirme bu cihazda yapılır.'),
+    [{ label: _t('Vazgeç'), value: false }, { label: _t('Kontrol et'), value: true, primary: true }]))) return;
+  const label = btn.textContent;
+  btn.disabled = true;
+  try {
+    const n = await KasaStrength.checkBreaches(db.passwords, (pre) => kasa.hibpRange(pre),
+      (d, t) => { btn.textContent = _t('Kontrol ediliyor… %{0}', Math.round((d / t) * 100)); });
+    db.prefs ||= {};
+    db.prefs.breachCheckAt = Date.now();
+    persist();
+    render();
+    toast(n ? _t('⚠ {0} şifre sızıntılarda görüldü', n) : _t('✓ Hiçbir şifre sızıntılarda görülmedi'));
+  } catch (e) {
+    toast(_t('Sızıntı kontrolü yapılamadı: ') + cleanErr(e));
+    btn.textContent = label;
+    btn.disabled = false;
+  }
 }
 
 function groupBy(arr, keyFn) {
