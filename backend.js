@@ -337,6 +337,23 @@
         });
       },
     },
+    importFile() {
+      const inp = document.createElement('input');
+      inp.type = 'file';
+      inp.accept = '.csv,text/csv,text/plain,text/comma-separated-values';
+      const p = new Promise((resolve, reject) => {
+        inp.addEventListener('cancel', () => resolve(null));
+        inp.addEventListener('change', async () => {
+          const f = inp.files?.[0];
+          if (!f) return resolve(null);
+          if (f.size > 20 * 1024 * 1024) return reject(new Error(_t('Dosya çok büyük (20 MB üstü).')));
+          resolve({ name: f.name, text: root.KasaImport.decode(new Uint8Array(await f.arrayBuffer())), canDelete: false });
+        });
+      });
+      inp.click();
+      return p;
+    },
+    deleteImportFile: async () => false,
     recover: onlyOnComputer(_t('Kurtarma anahtarıyla yeni ana şifre belirlemek')),
     changePassword: onlyOnComputer(_t('Ana şifreyi değiştirmek')),
     newRecoveryKey: onlyOnComputer(_t('Kurtarma anahtarı oluşturmak')),

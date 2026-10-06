@@ -258,6 +258,9 @@ window.openSettingsSheet = async function () {
         h('div', { class: 'title' }, d.name + (d.self ? _t(' (bu cihaz)') : '')),
         h('div', { class: 'sub' }, d.error || (d.savedAt ? _t('Son kayıt: ') + fmtStamp(d.savedAt) : _t('Henüz kaydetmedi'))))))),
 
+    section(_t('Verileri taşı')),
+    importRow(row),
+
     section(_t('Görünüm ve dil')),
     themeRow(row),
     languageRow(row),

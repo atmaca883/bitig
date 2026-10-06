@@ -84,6 +84,11 @@ function acceptVault(res) {
   showMain();
   if (res.recoveryKey) {
     showRecoveryKey(res.recoveryKey, { first: true });
+    addPrompt({
+      key: 'import', icon: '📥', title: _t('Şifrelerini başka yerden aktar'),
+      sub: _t('Chrome, Edge, Safari, Bitwarden, 1Password… şifrelerini tek seferde Bitig’e al.'),
+      actions: [{ label: _t('İçe aktar'), primary: true, fn: () => importFlow() }, { label: _t('Nasıl?'), fn: () => importHelp() }, { label: _t('Sonra') }],
+    });
   } else if (!res.hasRecovery) {
     addPrompt({
       key: 'recovery', icon: '🛟', title: _t('Kurtarma anahtarın yok'),
@@ -127,6 +132,19 @@ $('#lnkRestore').addEventListener('click', async () => {
   }
 });
 
+// Yeni sürüm hazırsa (Windows) ya da çıktıysa (Mac) üstte kart göster
+function updatePrompt(u) {
+  if (!db || !u || (u.state !== 'ready' && u.state !== 'available')) return;
+  const ready = u.state === 'ready';
+  addPrompt({
+    key: 'update', icon: '⬆️',
+    title: ready ? _t('Bitig {0} hazır', u.version) : _t('Bitig {0} çıktı', u.version),
+    sub: ready ? _t('Yeniden başlatınca kurulur; verilerin olduğu gibi kalır.') : _t('İndirme sayfasından yeni sürümü indirip kurabilirsin.'),
+    actions: [{ label: ready ? _t('Şimdi yeniden başlat') : _t('İndir'), primary: true, fn: () => installUpdate() }, { label: _t('Sonra') }],
+  });
+}
+kasa.onUpdate?.((u) => updatePrompt(u));
+
 function showMain() {
   $('#lockView').hidden = true;
   $('#pinView').hidden = true;
@@ -141,6 +159,7 @@ function showMain() {
   if (pendingReminder) { showBanner(pendingReminder); pendingReminder = null; }
   kasa.bridge.pending().then((list) => list.forEach(handleCapture));
   kasa.settings.get().then((s) => { autoLockMinutes = s.autoLockMinutes ?? 10; });
+  kasa.update?.status().then(updatePrompt).catch(() => {});
 }
 
 // Tam kilit: ana şifre gerekir.

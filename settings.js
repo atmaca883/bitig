@@ -5,8 +5,9 @@
 async function openSettingsSheet() {
   editing = null;
   clearInterval(pairTimer);
-  const [st, info, pin, sy, hel] = await Promise.all([kasa.settings.get(), kasa.info(), kasa.pin.status(), kasa.sync.status(),
-    kasa.hello ? kasa.hello.status().catch(() => null) : null]);
+  const [st, info, pin, sy, hel, upd] = await Promise.all([kasa.settings.get(), kasa.info(), kasa.pin.status(), kasa.sync.status(),
+    kasa.hello ? kasa.hello.status().catch(() => null) : null,
+    kasa.update ? kasa.update.status().catch(() => null) : null]);
   const b = st.backup;
   const reopen = () => openSettingsSheet();
   const toggle = (checked, onchange) => {
@@ -71,16 +72,21 @@ async function openSettingsSheet() {
 
     ...syncSection(sy, row, toggle, reopen),
 
+    section(_t('Verileri taşı')),
+    importRow(row),
+
     section(_t('Görünüm ve dil')),
     themeRow(row),
     languageRow(row),
 
     section(_t('Başlangıç')),
-    row(_t('Windows açılışında başlat'), _t('Oturum açınca kenarda şerit olarak başlar'),
+    row(/Mac/.test(navigator.platform) ? _t('Mac açılışında başlat') : _t('Windows açılışında başlat'), _t('Oturum açınca kenarda şerit olarak başlar'),
       toggle(st.autostart, async (v) => { await kasa.settings.set({ autostart: v }); toast(v ? _t('Açılışta başlayacak') : _t('Açılışta başlamayacak')); })),
 
+    ...(upd && upd.state !== 'off' ? updateSection(upd, st, row, toggle, reopen) : []),
+
     section(_t('Hakkında')),
-    h('p', { class: 'muted small' }, _t("Electron {0} · Veri klasörü: {1}", info.electron, info.dataDir)),
+    h('p', { class: 'muted small' }, _t("Bitig {0} · Electron {1} · Veri klasörü: {2}", info.version, info.electron, info.dataDir)),
   );
   $('#sheetTitle').textContent = _t('⚙ Ayarlar');
   $('#sheet').classList.add('custom');
@@ -158,6 +164,135 @@ kasa.onPaired((cl) => {
 
 // ---------- dil ----------
 // Seçim tarayıcı deposunda (arayüz açılırken okunur) ve ana süreçte (pencere/bildirim metinleri) saklanır.
+// ---------- içe aktarma ----------
+const IMPORT_HELP = () => [
+  ['Chrome', _t('Ayarlar → Otomatik doldurma ve şifreler → Google Şifre Yöneticisi → Ayarlar → Şifreleri dışa aktar')],
+  ['Edge', _t('Ayarlar → Profiller → Şifreler → ⋯ → Şifreleri dışa aktar')],
+  ['Firefox', _t('Menü → Şifreler → ⋯ → Girişleri dışa aktar')],
+  ['Safari / iPhone', _t('Mac: Dosya → Dışa aktar → Şifreler. iPhone: Ayarlar → Şifreler → ⋯ → Dışa aktar')],
+  ['Bitwarden', _t('Kasa → Araçlar → Kasayı dışa aktar → .csv')],
+  ['1Password', _t('Dosya → Dışa aktar → CSV')],
+  ['LastPass / KeePass', _t('Hesap seçenekleri / Dosya → Dışa aktar → CSV')],
+];
+
+// Kaynak kaynak dışa aktarma adımları (ask penceresinin başlığının altına eklenir)
+function importHelp() {
+  const done = ask(_t('Şifreleri nasıl dışa aktarırım?'), '', [{ label: _t('Tamam'), value: true, primary: true }]);
+  $('#dialog .dialog-card h3')?.after(h('div', { class: 'import-help' },
+    ...IMPORT_HELP().map(([n, s]) => h('div', null, h('b', null, n), h('span', null, s))),
+    h('p', { class: 'muted small' }, _t('Dışa aktarılan dosyada şifreler açık metin olarak durur; içe aktardıktan sonra silmeyi unutma.'))));
+  return done;
+}
+
+// Dokunuşun içinde çağrılır (telefonda dosya seçici ancak böyle açılır): kasa.importFile beklemeden başlar
+function importFlow() {
+  return kasa.importFile().then((f) => f && importPreview(f), (e) => toast(cleanErr(e)));
+}
+
+async function importPreview(f) {
+  const r = KasaImport.convert(f.text);
+  if (r.error) {
+    await ask(_t('Bu dosyada şifre bulunamadı'),
+      _t('Şifre sütunu olan bir CSV dosyası seç (Chrome, Edge, Firefox, Safari, Bitwarden, 1Password, LastPass, KeePass).'),
+      [{ label: _t('Tamam'), value: true, primary: true }]);
+    return;
+  }
+  const match = (p) => db.passwords.find((x) => K.sameAccount(x, p));
+  const fresh = r.passwords.filter((p) => !match(p));
+  const changed = r.passwords.filter((p) => { const x = match(p); return x && x.password !== p.password; });
+  const same = r.passwords.length - fresh.length - changed.length;
+  const lines = [
+    _t('{0} şifre yeni', fresh.length),
+    same && _t('{0} şifre zaten kayıtlı (aynısı)', same),
+    changed.length && _t('{0} hesap kayıtlı ama şifresi farklı', changed.length),
+    r.notes.length && _t('{0} güvenli not', r.notes.length),
+    r.skipped && _t('{0} satır atlandı (şifresi yok)', r.skipped),
+  ].filter(Boolean);
+  const choice = await ask(
+    _t('{0}: {1} kayıt bulundu', r.source || f.name, r.passwords.length + r.notes.length),
+    lines.join(' · '),
+    [{ label: _t('Vazgeç'), value: null },
+      ...(changed.length ? [{ label: _t('Farklı olanları da güncelle'), value: 'update' }] : []),
+      { label: _t('İçe aktar'), value: 'add', primary: true }]);
+  if (!choice) return;
+
+  for (const p of fresh) db.passwords.push(newItem('password', { ...p, projectId: '' }));
+  if (choice === 'update') {
+    for (const p of changed) {
+      const x = match(p);
+      setPassword(x, p.password);
+      if (p.note && !(x.note || '').includes(p.note)) x.note = [x.note, p.note].filter(Boolean).join('\n');
+      if (p.totp && !x.totp) x.totp = p.totp;
+    }
+  }
+  for (const n of r.notes) db.notes.push(newItem('note', { ...n, projectId: '' }));
+  persist();
+  render();
+  toast(_t('✓ {0} şifre, {1} not içe aktarıldı', fresh.length + (choice === 'update' ? changed.length : 0), r.notes.length));
+
+  // Açık metin dosya ortada kalmasın
+  if (f.canDelete) {
+    const del = await ask(_t('CSV dosyası silinsin mi?'),
+      _t('“{0}” dosyasında şifrelerin açık metin olarak duruyor. Hepsi Bitig’e şifreli olarak aktarıldı; dosyayı silmen önerilir.', f.name),
+      [{ label: _t('Sakla'), value: false }, { label: _t('Dosyayı sil'), value: true, primary: true }]);
+    if (del) toast((await kasa.deleteImportFile()) ? _t('✓ Dosya silindi') : _t('Dosya silinemedi; kendin sil.'));
+  } else {
+    await ask(_t('Dosyayı silmeyi unutma'),
+      _t('“{0}” dosyasında şifrelerin açık metin olarak duruyor. Dosyalar uygulamasından silmeni öneririz.', f.name),
+      [{ label: _t('Tamam'), value: true, primary: true }]);
+  }
+}
+
+function importRow(row) {
+  return row(_t('Başka yerden içe aktar'), _t('Chrome, Edge, Firefox, Safari, Bitwarden, 1Password, LastPass, KeePass (CSV)'),
+    h('button', { class: 'mini', type: 'button', onclick: () => importHelp() }, _t('Nasıl?')),
+    h('button', { class: 'mini primary-mini', type: 'button', onclick: () => importFlow() }, _t('İçe aktar')));
+}
+
+// ---------- güncellemeler ----------
+function updateText(u) {
+  switch (u.state) {
+    case 'checking': return _t('Denetleniyor…');
+    case 'uptodate': return _t('✓ Güncel') + (u.lastCheck ? ' · ' + _t('son denetim ') + fmtStamp(u.lastCheck) : '');
+    case 'downloading': return _t('Sürüm {0} indiriliyor… %{1}', u.version, u.percent);
+    case 'ready': return _t('Sürüm {0} hazır · yeniden başlatınca kurulur', u.version);
+    case 'available': return _t('Sürüm {0} çıktı', u.version);
+    case 'installing': return _t('Kuruluyor…');
+    case 'error': return _t('⚠ Denetlenemedi: ') + u.error;
+    default: return '';
+  }
+}
+
+async function installUpdate() {
+  await flush();
+  await kasa.update.install();
+}
+
+function updateSection(u, st, row, toggle, reopen) {
+  const action = u.state === 'ready'
+    ? h('button', { class: 'mini primary-mini', type: 'button', onclick: installUpdate }, _t('Yeniden başlat'))
+    : u.state === 'available'
+      ? h('button', { class: 'mini primary-mini', type: 'button', onclick: installUpdate }, _t('İndir'))
+      : h('button', { class: 'mini', type: 'button', disabled: u.state === 'checking' || u.state === 'downloading',
+        onclick: async (e) => {
+          // Denetlendiği görünsün: düğmede bekleme, sonunda sonuç mesajı
+          const b = e.currentTarget;
+          b.disabled = true;
+          b.textContent = _t('Denetleniyor…');
+          const r = await kasa.update.check();
+          toast(r?.state === 'uptodate' ? _t('✓ Bitig güncel (sürüm {0})', r.current)
+            : r?.state === 'error' ? _t('⚠ Denetlenemedi: ') + r.error
+              : r?.version ? _t('Yeni sürüm bulundu: {0}', r.version) : _t('Denetlendi'));
+          reopen();
+        } }, _t('Denetle'));
+  return [
+    section(_t('Güncellemeler')),
+    row(_t('Bitig {0}', u.current), updateText(u), action),
+    row(_t('Otomatik denetle'), u.mode === 'install' ? _t('Yeni sürüm arka planda iner; yeniden başlatınca kurulur') : _t('Yeni sürüm çıkınca haber verir'),
+      toggle(st.autoUpdate !== false, async (v) => { await kasa.settings.set({ autoUpdate: v }); })),
+  ];
+}
+
 // Windows Hello (yüz, parmak izi ya da Windows PIN'i) ile açma
 function helloRow(hel, row, reopen) {
   const L = hel.label;

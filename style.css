@@ -583,3 +583,9 @@ select.compact { width: auto; padding: 5px 8px; }
 
 /* Face ID / Windows Hello ile aç */
 .bio-btn { width: 100%; margin: 4px 0 10px; padding: 10px; font-weight: 600; }
+
+/* içe aktarma yardımı */
+.import-help { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 4px; font-size: 12.5px; text-align: left; }
+.import-help div { display: flex; flex-direction: column; gap: 1px; }
+.import-help b { font-size: 12.5px; }
+.import-help span { color: var(--muted); }

@@ -25,7 +25,8 @@ const VIEWS = {
 
   passwords(c) {
     const list = db.passwords.filter(inFilter).sort((a, b) => a.title.localeCompare(b.title, 'tr'));
-    if (!list.length) return c.append(empty('🔑', _t('Henüz şifre yok. ＋ ile ekle.')));
+    if (!list.length) return c.append(empty('🔑', _t('Henüz şifre yok. ＋ ile ekle.')),
+      h('div', { class: 'footer-actions' }, h('button', { class: 'mini primary-mini', type: 'button', onclick: () => importFlow() }, _t('Başka yerden içe aktar'))));
     c.append(...list.map((x) => passwordRow(x)));
   },
 
