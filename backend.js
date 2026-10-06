@@ -354,11 +354,32 @@
       return p;
     },
     deleteImportFile: async () => false,
+    verifyPassword: async (password) => { await verifyPassword(password); return true; },
+    async exportSave(name, text, type = 'text/plain') {
+      const url = URL.createObjectURL(new Blob([text], { type: type + ';charset=utf-8' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return name;
+    },
     recover: onlyOnComputer(_t('Kurtarma anahtarıyla yeni ana şifre belirlemek')),
     changePassword: onlyOnComputer(_t('Ana şifreyi değiştirmek')),
     newRecoveryKey: onlyOnComputer(_t('Kurtarma anahtarı oluşturmak')),
     restore: onlyOnComputer(_t('Yedekten geri yüklemek')),
-    backup: async () => false,
+    // Şifreli yedek: bu telefondaki kasa dosyası (bilgisayardakiyle aynı biçim; "Yedekten geri yükle" ile açılır)
+    async backup() {
+      const file = await Store.get('vault');
+      if (!file) return false;
+      const { pinBox, ...wraps } = file.wraps; // PIN bu telefona özel
+      const d = new Date();
+      const day = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      await root.kasa.exportSave('kasa-yedek-' + day + '.enc', JSON.stringify({ ...file, wraps }), 'application/octet-stream');
+      return true;
+    },
     info: async () => ({
       hasRecovery: !!S.wraps?.recovery, recoveryCreated: S.wraps?.recovery?.created || null,
       dataDir: _t('Bu telefon (şifreli)'), electron: 'telefon',

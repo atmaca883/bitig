@@ -74,6 +74,7 @@ async function openSettingsSheet() {
 
     section(_t('Verileri taşı')),
     importRow(row),
+    exportRow(row),
 
     section(_t('Görünüm ve dil')),
     themeRow(row),
@@ -243,6 +244,39 @@ async function importPreview(f) {
   }
 }
 
+// ---------- dışa aktarma ----------
+async function exportFlow() {
+  const kind = await ask(_t('Dışa aktar'),
+    _t('Şifreli yedek: yalnızca Bitig ve ana şifrenle açılır; saklamak için en güvenlisi. CSV: şifreler başka bir uygulamaya taşımak için (Chrome, Bitwarden, 1Password…). JSON: notlar, görevler ve projeler dahil her şey. CSV ve JSON açık metindir.'),
+    [{ label: _t('Vazgeç'), value: null },
+      { label: _t('Şifreli yedek'), value: 'enc' },
+      { label: _t('Her şey (JSON)'), value: 'json' },
+      { label: _t('Şifreler (CSV)'), value: 'csv', primary: true }]);
+  if (!kind) return;
+  await flush();
+  if (kind === 'enc') {
+    if (await kasa.backup()) toast(_t('Şifreli yedek kaydedildi'));
+    return;
+  }
+  const ok = await formDialog({
+    title: _t('Ana şifreni gir'),
+    text: _t('Bu dosyada şifrelerin açık metin olarak yer alır. Kimseyle paylaşma; işin bitince sil.'),
+    fields: [{ k: 'pw', label: _t('Ana şifre') }], submitLabel: _t('Dışa aktar'),
+    onSubmit: async (v) => { await kasa.verifyPassword(v.pw); },
+  });
+  if (!ok) return;
+  const day = todayStr();
+  const name = kind === 'csv' ? `Bitig-sifreler-${day}.csv` : `Bitig-veriler-${day}.json`;
+  const text = kind === 'csv' ? KasaImport.toCSV(db.passwords) : KasaImport.toJSON(db);
+  const saved = await kasa.exportSave(name, text, kind === 'csv' ? 'text/csv' : 'application/json');
+  if (saved) toast(kind === 'csv' ? _t('✓ {0} şifre dışa aktarıldı: {1}', db.passwords.length, saved) : _t('✓ Tüm veriler dışa aktarıldı: {0}', saved));
+}
+
+function exportRow(row) {
+  return row(_t('Dışa aktar'), _t('Şifreli yedek, şifreler (CSV) ya da her şey (JSON)'),
+    h('button', { class: 'mini', type: 'button', onclick: () => exportFlow() }, _t('Dışa aktar')));
+}
+
 function importRow(row) {
   return row(_t('Başka yerden içe aktar'), _t('Chrome, Edge, Firefox, Safari, Bitwarden, 1Password, LastPass, KeePass (CSV)'),
     h('button', { class: 'mini', type: 'button', onclick: () => importHelp() }, _t('Nasıl?')),
@@ -287,7 +321,7 @@ function updateSection(u, st, row, toggle, reopen) {
         } }, _t('Denetle'));
   return [
     section(_t('Güncellemeler')),
-    row(_t('Bitig {0}', u.current), updateText(u), action),
+    (() => { const r = row(_t('Bitig {0}', u.current), updateText(u), action); r.dataset.updateRow = '1'; return r; })(),
     row(_t('Otomatik denetle'), u.mode === 'install' ? _t('Yeni sürüm arka planda iner; yeniden başlatınca kurulur') : _t('Yeni sürüm çıkınca haber verir'),
       toggle(st.autoUpdate !== false, async (v) => { await kasa.settings.set({ autoUpdate: v }); })),
   ];

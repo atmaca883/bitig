@@ -126,5 +126,23 @@
     try { return new TextDecoder('windows-1254').decode(u); } catch { return t; }
   }
 
-  return { parseCSV, convert, detectSource, hostOf, decode };
+  // ---------- dışa aktarma ----------
+  // Chrome biçimi (name,url,username,password,note): Chrome, Edge, Firefox, Bitwarden, 1Password… hepsi okur
+  const csvField = (v) => { const t = String(v ?? ''); return /[",\r\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+  function toCSV(passwords) {
+    const rows = [['name', 'url', 'username', 'password', 'note']];
+    for (const p of passwords) rows.push([p.title, p.url, p.username, p.password, p.note]);
+    return rows.map((r) => r.map(csvField).join(',')).join('\r\n') + '\r\n';
+  }
+
+  // Her şey (çöp kutusu hariç), olduğu gibi
+  function toJSON(db, extra = {}) {
+    const pick = (k) => (db[k] || []).map((x) => ({ ...x }));
+    return JSON.stringify({
+      format: 'bitig-export', version: 1, exportedAt: new Date().toISOString(), ...extra,
+      projects: pick('projects'), passwords: pick('passwords'), notes: pick('notes'), tasks: pick('tasks'),
+    }, null, 2);
+  }
+
+  return { parseCSV, convert, detectSource, hostOf, decode, toCSV, toJSON };
 });

@@ -140,6 +140,15 @@
     'Mevcut notu aç': 'Open the existing note', 'Bu isimde bir proje zaten var': 'A project with this name already exists',
     '“{0}” boş olamaz': '“{0}” can’t be empty', 'Kaydedildi': 'Saved', 'Kaydedilemedi: ': 'Could not save: ', 'Silindi': 'Deleted',
     // içe aktarma
+    'Dışa aktar': 'Export', 'Dışa aktarılan dosyayı kaydet': 'Save the exported file',
+    'Şifreli yedek: yalnızca Bitig ve ana şifrenle açılır; saklamak için en güvenlisi. CSV: şifreler başka bir uygulamaya taşımak için (Chrome, Bitwarden, 1Password…). JSON: notlar, görevler ve projeler dahil her şey. CSV ve JSON açık metindir.':
+      'Encrypted backup: opens only with Bitig and your master password; the safest way to keep a copy. CSV: passwords, to move them to another app (Chrome, Bitwarden, 1Password…). JSON: everything, including notes, tasks and projects. CSV and JSON are plain text.',
+    'Şifreli yedek': 'Encrypted backup', 'Her şey (JSON)': 'Everything (JSON)', 'Şifreler (CSV)': 'Passwords (CSV)',
+    'Şifreli yedek kaydedildi': 'Encrypted backup saved', 'Ana şifreni gir': 'Enter your master password',
+    'Bu dosyada şifrelerin açık metin olarak yer alır. Kimseyle paylaşma; işin bitince sil.': 'This file contains your passwords in plain text. Don’t share it; delete it when you’re done.',
+    '✓ {0} şifre dışa aktarıldı: {1}': ['✓ {0} password exported: {1}', '✓ {0} passwords exported: {1}', 0],
+    '✓ Tüm veriler dışa aktarıldı: {0}': '✓ All data exported: {0}',
+    'Şifreli yedek, şifreler (CSV) ya da her şey (JSON)': 'Encrypted backup, passwords (CSV) or everything (JSON)',
     'İçe aktarılacak CSV dosyasını seç': 'Choose the CSV file to import', 'Dosya çok büyük (20 MB üstü).': 'The file is too large (over 20 MB).',
     'Şifrelerini başka yerden aktar': 'Bring your passwords from elsewhere',
     'Chrome, Edge, Safari, Bitwarden, 1Password… şifrelerini tek seferde Bitig’e al.': 'Move your Chrome, Edge, Safari, Bitwarden, 1Password… passwords into Bitig in one go.',

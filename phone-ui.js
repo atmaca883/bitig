@@ -260,6 +260,7 @@ window.openSettingsSheet = async function () {
 
     section(_t('Verileri taşı')),
     importRow(row),
+    exportRow(row),
 
     section(_t('Görünüm ve dil')),
     themeRow(row),

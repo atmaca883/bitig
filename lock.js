@@ -143,7 +143,19 @@ function updatePrompt(u) {
     actions: [{ label: ready ? _t('Şimdi yeniden başlat') : _t('İndir'), primary: true, fn: () => installUpdate() }, { label: _t('Sonra') }],
   });
 }
-kasa.onUpdate?.((u) => updatePrompt(u));
+kasa.onUpdate?.((u) => {
+  updatePrompt(u);
+  // Ayarlar açıksa güncelleme satırı canlı kalsın: indirirken yüzde, bitince (hazır/güncel/hata) düğmeyle birlikte yenile
+  const r = document.querySelector('#sheetForm [data-update-row]');
+  if (!r || $('#sheet').hidden) return;
+  if (u.state === 'downloading' || u.state === 'checking') {
+    const s = r.querySelector('.sub');
+    if (s) s.textContent = updateText(u);
+  } else {
+    const top = $('#sheetForm').scrollTop;
+    openSettingsSheet().then(() => { $('#sheetForm').scrollTop = top; });
+  }
+});
 
 function showMain() {
   $('#lockView').hidden = true;
