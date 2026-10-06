@@ -18,6 +18,7 @@ const FORMS = {
       { k: 'title', label: _t('Başlık'), type: 'text', req: true, ph: _t('Örn. Hosting paneli') },
       { k: 'username', label: _t('Kullanıcı adı / e-posta'), type: 'text' },
       { k: 'password', label: _t('Şifre'), type: 'secret' },
+      { k: 'totp', label: _t('2FA anahtarı (isteğe bağlı)'), type: 'totp' },
       { k: 'url', label: _t('Adres'), type: 'text', ph: 'https://' },
       { k: 'projectId', label: _t('Proje'), type: 'project' },
       { k: 'note', label: _t('Not'), type: 'textarea' },
@@ -98,6 +99,27 @@ function buildField(f, value) {
       h('button', { type: 'button', class: 'mini', title: _t('Kopyala'),
         onclick: () => { if (input.value) { kasa.copy(input.value, true); toast(_t('Şifre kopyalandı · 30 sn sonra silinecek')); } } }, '⧉')),
       strengthMeter(input));
+  } else if (f.type === 'totp') {
+    // Sitenin verdiği anahtar ya da otpauth:// adresi; QR'dan da eklenebilir. Geçerliyse şu anki kod canlı görünür.
+    input = h('input', { type: 'password', 'data-k': f.k, autocomplete: 'off', spellcheck: 'false', placeholder: _t('Anahtar ya da QR kod') });
+    input.value = value || '';
+    const preview = h('div', { class: 'totp-preview', hidden: true });
+    const update = async () => {
+      const v = input.value.trim();
+      preview.hidden = !v;
+      if (!v) return;
+      const g = await KasaTotp.generate(v);
+      preview.classList.toggle('bad', !g);
+      preview.textContent = g ? _t('Şu anki kod: {0} · {1} sn', KasaTotp.pretty(g.code), g.remaining) : _t('⚠ Geçersiz anahtar');
+    };
+    input.addEventListener('input', update);
+    const timer = setInterval(() => (input.isConnected ? update() : clearInterval(timer)), 1000);
+    setTimeout(update);
+    label.append(h('div', { class: 'field-row' }, input,
+      h('button', { type: 'button', class: 'mini', title: _t('Göster / gizle'),
+        onclick: () => { input.type = input.type === 'password' ? 'text' : 'password'; } }, '👁'),
+      h('button', { type: 'button', class: 'mini', title: _t('QR koddan ekle'), onclick: () => scanQrInto(input) }, '📷')),
+    preview);
   } else {
     input = h('input', { type: f.type, 'data-k': f.k, placeholder: f.ph || '', autocomplete: 'off' });
     input.value = value || '';
@@ -217,6 +239,14 @@ async function saveEditor() {
     return;
   }
   if (type === 'note' && !values.title.trim() && !values.body.trim()) { closeEditor(); return; }
+  if (type === 'password') {
+    values.totp = (values.totp || '').trim();
+    if (values.totp && !KasaTotp.parse(values.totp)) {
+      toast(_t('2FA anahtarı geçersiz; sitenin verdiği anahtarı ya da QR kodu kontrol et.'));
+      form.querySelector('[data-k="totp"]')?.focus();
+      return;
+    }
+  }
   if (!(await checkDuplicates(type, item, values, isNew))) return;
   if (type === 'task' && item.remindAt !== values.remindAt) item.done = false;
 

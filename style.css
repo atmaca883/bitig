@@ -603,3 +603,25 @@ select.compact { width: auto; padding: 5px 8px; }
 .pw-meter[data-score="2"] i::after { --w: 60%; --c: var(--warn); }
 .pw-meter[data-score="3"] i::after { --w: 82%; --c: var(--ok); }
 .pw-meter[data-score="4"] i::after { --w: 100%; --c: var(--ok); }
+
+/* 2FA kodları */
+.chip.totp { cursor: pointer; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.chip.totp:hover { background: color-mix(in srgb, var(--accent) 26%, transparent); }
+.chip.totp.ending { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.totp-preview { margin-top: 5px; font-size: 12px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+.totp-preview.bad { color: var(--danger); }
+.totp-preview[hidden] { display: none; }
+/* telefonda kamerayla QR tarama */
+.qr-cam { position: fixed; inset: 0; z-index: 1000; background: #000; display: flex; align-items: center; justify-content: center; }
+.qr-cam video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.qr-cam-frame { position: relative; width: min(70vw, 300px); aspect-ratio: 1; border: 3px solid #fff; border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45); }
+.qr-cam-status { position: absolute; top: calc(24px + env(safe-area-inset-top)); left: 16px; right: 16px; text-align: center; color: #fff; font-weight: 600; text-shadow: 0 1px 3px #000; }
+.qr-cam-close { position: absolute; bottom: calc(28px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); padding: 10px 22px; font-size: 15px; }
+
+/* telefona kur: QR */
+.phone-qr { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 6px 0; text-align: left; }
+.qr-box { width: 190px; height: 190px; background: #fff; border-radius: 14px; padding: 8px; }
+.qr-box svg { width: 100%; height: 100%; display: block; }
+.phone-qr .steps { margin: 0; padding-left: 20px; font-size: 13px; }
+.phone-qr p { margin: 0; text-align: center; word-break: break-all; }

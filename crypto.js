@@ -104,6 +104,18 @@
     return diff === 0;
   }
 
+  // Bilgisayardaki vault.js ile aynı: 24 karakter (120 bit), XXXX-XXXX-… biçiminde
+  function newRecoveryKey() {
+    const chars = Array.from(random(24), (b) => B32[b & 31]).join('');
+    return chars.match(/.{4}/g).join('-');
+  }
+
+  // Şifre kilitlerinin parmak izi: eşitleme dosyasının şifreli bölümüne yazılır; başka cihazdan gelen kilit ancak bu tutarsa kabul edilir
+  async function sha256Hex(text) {
+    const d = await crypto.subtle.digest('SHA-256', enc.encode(text));
+    return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
   function normalizeRecoveryKey(s) {
     const clean = String(s || '').toUpperCase().replace(/[^0-9A-Z]/g, '')
       .replace(/O/g, '0').replace(/[IL]/g, '1').replace(/U/g, 'V');
@@ -112,6 +124,6 @@
 
   root.KasaCrypto = {
     seal, open, wrapKey, unwrapKey, sealJson, openJson, buildFile, hashPin, checkPin,
-    normalizeRecoveryKey, random, b64, unb64, B32,
+    normalizeRecoveryKey, newRecoveryKey, sha256Hex, random, b64, unb64, B32,
   };
 })(typeof self !== 'undefined' ? self : globalThis);

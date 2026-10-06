@@ -29,13 +29,25 @@ function taskRow(t, { hideProject = false } = {}) {
   );
 }
 
+// 2FA kodu: her saniye güncellenir (app.js), tıklayınca kopyalanır ve 30 sn sonra panodan silinir
+function totpChip(p) {
+  if (!p.totp || !KasaTotp.parse(p.totp)) return null;
+  return h('span', { class: 'chip totp', 'data-totp-id': p.id, title: _t('2FA kodunu kopyala'),
+    onclick: stop(async () => {
+      const g = await KasaTotp.generate(p.totp);
+      if (!g) return;
+      kasa.copy(g.code, true);
+      toast(_t('2FA kodu kopyalandı · {0} sn geçerli', g.remaining));
+    }) }, '🔢 ··· ···');
+}
+
 function passwordRow(p, { hideProject = false } = {}) {
   return h('div', { class: 'item t-pass', onclick: () => openEditor('password', p) },
     h('div', { class: 'ico' }, '🔑'),
     h('div', { class: 'body' },
       h('div', { class: 'title' }, p.title),
       h('div', { class: 'sub' }, p.username || p.url || '—'),
-      h('div', { class: 'chips' }, ...healthChips(p), stampChip(p), !hideProject && projectChip(p.projectId))),
+      h('div', { class: 'chips' }, totpChip(p), ...healthChips(p), stampChip(p), !hideProject && projectChip(p.projectId))),
     h('div', { class: 'side' },
       p.username && h('button', { class: 'mini', title: _t('Kullanıcı adını kopyala'),
         onclick: stop(() => { kasa.copy(p.username); toast(_t('Kullanıcı adı kopyalandı')); }) }, '@'),

@@ -71,6 +71,21 @@ kasa.onMerged(({ data, changes, from }) => {
   if (changes) toast(from ? _t("⟳ {0}: {1} değişiklik geldi", from, changes) : _t("⟳ Diğer cihazlardan {0} değişiklik geldi", changes));
 });
 
+// Görünen 2FA kodlarını her saniye yenile (kod 30 sn'de bir değişir; kalan süre de görünür)
+async function tickTotp() {
+  const chips = document.querySelectorAll('.chip.totp[data-totp-id]');
+  if (!chips.length || !db || document.hidden) return;
+  for (const el of chips) {
+    const p = db.passwords.find((x) => x.id === el.dataset.totpId);
+    const g = p && await KasaTotp.generate(p.totp);
+    if (g) {
+      el.textContent = '🔢 ' + KasaTotp.pretty(g.code) + ' · ' + g.remaining;
+      el.classList.toggle('ending', g.remaining <= 5);
+    }
+  }
+}
+setInterval(tickTotp, 1000);
+
 function render() {
   if (!db) return;
   pwHealthMemo = null; // şifre sağlığı analizi bu çizim için yeniden hesaplansın
@@ -79,6 +94,7 @@ function render() {
   const c = $('#content');
   c.replaceChildren();
   if (query) renderSearch(c); else if (selectedDay) renderDay(c); else VIEWS[view](c);
+  tickTotp();
   $('#fab').hidden = !!query || (!selectedDay && (view === 'health' || view === 'trash' || (view === 'projects' && !!openProjectId)));
   renderCalendar();
 }

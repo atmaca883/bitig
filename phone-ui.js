@@ -47,15 +47,7 @@ function bioUnlock(btn) {
     .finally(() => { btn.disabled = false; });
 }
 
-// Telefonda "unuttum": kurtarma bilgisayardan yapılır
-(() => {
-  const old = $('#lnkForgot');
-  const link = old.cloneNode(true); // masaüstü dinleyicisini bırak
-  old.replaceWith(link);
-  link.addEventListener('click', () => ask(_t('Ana şifreni mi unuttun?'),
-    _t('Bilgisayardaki Bitig’de kilit ekranındaki “Ana şifremi unuttum” ile kurtarma anahtarını kullanıp yeni ana şifre belirle. Telefon yeni şifreyi eşitlemeyle otomatik alır; sonra burada yeni şifreyle açarsın.'),
-    [{ label: _t('Tamam'), value: true, primary: true }]));
-})();
+// Telefonda "Ana şifremi unuttum" kilit ekranının kendi akışını (kurtarma anahtarı + yeni şifre) kullanır
 
 // Kurulum ekranlarının üstündeki logo
 const brandHero = () => h('div', { class: 'brand-hero' },
@@ -73,20 +65,51 @@ function setupShell(...children) {
   return view;
 }
 
+// Ana ekrandan mı açıldı? (iPhone'da Safari ile ana ekrandaki uygulama ayrı hafıza kullanır: kurulum orada yapılmalı)
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const UA = navigator.userAgent;
+const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+const isAndroid = /Android/.test(UA);
+let installEvent = null;
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvent = e; if ($('#installBtn')) $('#installBtn').hidden = false; });
+addEventListener('appinstalled', () => { installEvent = null; const m = $('#installMsg'); if (m) m.textContent = _t('✓ Yüklendi. Şimdi ana ekrandaki Bitig simgesinden aç.'); });
+
+function showInstall() {
+  const iosSafari = isIOS && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(UA);
+  const steps = isIOS
+    ? (iosSafari
+      ? [_t('Alttaki Paylaş düğmesine dokun (yukarı ok çıkan kare).'), _t('Listeden “Ana Ekrana Ekle”yi seç.'), _t('“Web Uygulaması olarak aç” açık kalsın, “Ekle”ye dokun.'), _t('Ana ekrandaki Bitig simgesinden aç.')]
+      : [_t('iPhone’da ana ekrana ekleme Safari’den yapılır. Bu sayfayı Safari’de aç.')])
+    : [_t('Sağ üstteki ⋮ menüsüne dokun.'), _t('“Ana ekrana ekle” ya da “Uygulamayı yükle”yi seç.'), _t('Ana ekrandaki Bitig simgesinden aç.')];
+  setupShell(
+    brandHero(),
+    h('h1', null, _t('Önce ana ekrana ekle')),
+    h('p', { class: 'muted' }, _t('Bitig telefonda uygulama gibi çalışır: ana ekrandan açılır, internetsiz de açılır. Kurulumu ana ekrandaki Bitig’de yap.')),
+    isAndroid && h('button', { id: 'installBtn', class: 'primary', type: 'button', hidden: !installEvent,
+      onclick: async () => { if (!installEvent) return; installEvent.prompt(); await installEvent.userChoice.catch(() => {}); } }, _t('Bitig’i yükle')),
+    h('ol', { class: 'steps setup-steps' }, ...steps.map((s) => h('li', null, s))),
+    isIOS && !iosSafari && h('button', { class: 'primary', type: 'button', onclick: () => { kasa.copy(location.href); toast(_t('Adres kopyalandı; Safari’ye yapıştır')); } }, _t('Adresi kopyala')),
+    h('p', { id: 'installMsg', class: 'muted small' }),
+    h('div', { class: 'lock-links' }, h('button', { type: 'button', class: 'link', onclick: () => { sessionStorage.setItem('bitig.browserOk', '1'); showSetup(); } }, _t('Tarayıcıda devam et'))),
+  );
+}
+
 async function showSetup(msg = '') {
   const driveId = kasa.phone.driveId();
   if (driveId && kasa.phone.isDriveConnected()) return showSetupPassword(msg);
+  // Telefonda tarayıcıdan açıldıysa önce ana ekrana ekletelim (geliştirme bilgisayarında atla)
+  const dev = ['localhost', '127.0.0.1'].includes(location.hostname);
+  if ((isIOS || isAndroid) && !isStandalone() && !dev && !sessionStorage.getItem('bitig.browserOk')) return showInstall();
 
   // Test klasörü yalnızca geliştirme bilgisayarında görünür
   const drives = kasa.phone.drives().filter((d) => d.available() || d.comingSoon);
   setupShell(
     brandHero(),
     h('h1', null, _t('Bu telefona kur')),
-    h('p', { class: 'muted' }, _t('Telefon, bilgisayarındaki Bitig ile bulut üzerinden eşitlenir. Veriler şifreli gider; bulut içini göremez.')),
+    h('p', { class: 'muted' }, _t('Bitig verilerini senin bulutunda (Dropbox ya da OneDrive) şifreli olarak saklar; bulut içini göremez. Bilgisayardaki Bitig de aynı buluttan eşitlenir.')),
     h('ol', { class: 'steps setup-steps' },
-      h('li', null, _t('Bilgisayardaki Bitig’de '), h('b', null, _t('Ayarlar → Cihazlar arası eşitleme')), _t('’yi aç.')),
-      h('li', null, _t('Aşağıdan aynı bulutu seç ve hesabınla bağlan.')),
-      h('li', null, _t('Ana şifreni gir.'))),
+      h('li', null, _t('Aşağıdan bir bulut seç ve hesabınla bağlan.')),
+      h('li', null, _t('Bitig zaten varsa ana şifrenle aç; yoksa yeni oluştur.'))),
     h('div', { class: 'drive-list' }, ...drives.map((d) => h('button', {
       type: 'button',
       class: 'drive-btn' + (d.available() ? '' : ' soon'),
@@ -105,6 +128,42 @@ async function showSetup(msg = '') {
   );
 }
 
+// Telefonda yeni kasa: ana şifre (iki kez) → kurtarma anahtarı gösterilir
+function showCreateVault(msg = '') {
+  const p1 = h('input', { type: 'password', placeholder: _t('Ana şifre'), autocomplete: 'new-password' });
+  const p2 = h('input', { type: 'password', placeholder: _t('Ana şifre (tekrar)'), autocomplete: 'new-password' });
+  const err = h('p', { class: 'error' }, msg);
+  const btn = h('button', { class: 'primary', type: 'submit' }, _t('Kasayı oluştur'));
+  setupShell(
+    brandHero(),
+    h('h1', null, _t('Yeni Bitig')),
+    h('p', { class: 'muted' }, _t('Tüm verilerin bu ana şifreyle şifrelenir. Ana şifre hiçbir yere kaydedilmez; unutursan birazdan vereceğim kurtarma anahtarıyla açabilirsin.')),
+    h('form', {
+      onsubmit: async (e) => {
+        e.preventDefault();
+        err.textContent = '';
+        if (p1.value.length < 8) { err.textContent = _t('Ana şifre en az 8 karakter olmalı.'); return; }
+        if (p1.value !== p2.value) { err.textContent = _t('Şifreler aynı değil.'); return; }
+        btn.disabled = true;
+        btn.textContent = _t('Oluşturuluyor…');
+        try {
+          const res = await kasa.phone.create(p1.value);
+          $('#setupView')?.remove();
+          acceptVault(res); // kurtarma anahtarını gösterir
+          toast(_t('Bitig bu telefonda oluşturuldu ✓'));
+        } catch (ex) {
+          err.textContent = cleanErr(ex);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = _t('Kasayı oluştur');
+        }
+      },
+    }, p1, p2, btn, err),
+    h('div', { class: 'lock-links' }, h('button', { type: 'button', class: 'link', onclick: () => showSetupPassword() }, _t('Geri'))),
+  );
+  p1.focus();
+}
+
 async function showSetupPassword(msg = '') {
   const label = kasa.phone.drives().find((d) => d.id === kasa.phone.driveId())?.label || 'Bulut';
   let found = 0;
@@ -115,8 +174,9 @@ async function showSetupPassword(msg = '') {
     setupShell(
       brandHero(),
       h('h1', null, _t("{0} bağlandı", label)),
-      h('p', { class: 'muted' }, listError || _t('Ama burada henüz Bitig yok. Bilgisayardaki Bitig’de Ayarlar → Cihazlar arası eşitleme’yi açtığından ve aynı bulutun seçili olduğundan emin ol.')),
-      h('button', { class: 'primary', type: 'button', onclick: () => showSetupPassword() }, _t('Tekrar dene')),
+      h('p', { class: 'muted' }, listError || _t('Burada henüz Bitig yok. Yeni başlıyorsan şimdi oluştur. Bilgisayarda zaten kullanıyorsan orada Ayarlar → Cihazlar arası eşitleme’yi aç ve aynı bulutu seç, sonra “Tekrar dene”.')),
+      !listError && h('button', { class: 'primary', type: 'button', onclick: () => showCreateVault() }, _t('Yeni Bitig oluştur')),
+      h('button', { class: listError ? 'primary' : '', type: 'button', onclick: () => showSetupPassword() }, _t('Tekrar dene')),
       h('div', { class: 'lock-links' }, h('button', { type: 'button', class: 'link', onclick: async () => { await kasa.phone.reset(); showSetup(); } }, _t('Başka bulut seç'))),
     );
     return;
@@ -156,7 +216,9 @@ async function showSetupPassword(msg = '') {
         }
       },
     }, input, btn, err),
-    h('div', { class: 'lock-links' }, h('button', { type: 'button', class: 'link', onclick: async () => { await kasa.phone.reset(); showSetup(); } }, _t('Başka bulut seç'))),
+    h('div', { class: 'lock-links' },
+      h('button', { type: 'button', class: 'link', onclick: () => $('#lnkForgot').click() }, _t('Ana şifremi unuttum')),
+      h('button', { type: 'button', class: 'link', onclick: async () => { await kasa.phone.reset(); showSetup(); } }, _t('Başka bulut seç'))),
   );
   input.focus();
 }
@@ -235,7 +297,11 @@ window.openSettingsSheet = async function () {
         ? [h('button', { class: 'mini', type: 'button', onclick: setPinFlow }, _t('Değiştir')), h('button', { class: 'mini', type: 'button', onclick: removePinFlow }, _t('Kaldır'))]
         : [h('button', { class: bio.enabled ? 'mini' : 'mini primary-mini', type: 'button', onclick: setPinFlow }, _t('PIN belirle'))])),
     row(_t('Otomatik kilit'), _t('Uygulamadan çıkınca da bu süre sayılır'), autoLock),
-    h('p', { class: 'muted small' }, _t('PIN bu telefona özeldir. Ana şifre, kurtarma anahtarı ve yedekler bilgisayardaki Bitig’den yönetilir.')),
+    row(_t('Ana şifre'), _t('Değişiklik diğer cihazlara da eşitlenir'),
+      h('button', { class: 'mini', type: 'button', onclick: changePasswordFlow }, _t('Değiştir'))),
+    row(_t('Kurtarma anahtarı'), _t('Ana şifreni unutursan kasayı bununla açarsın'),
+      h('button', { class: 'mini', type: 'button', onclick: createRecoveryFlow }, _t('Yenisini oluştur'))),
+    h('p', { class: 'muted small' }, _t('PIN ve Face ID bu telefona özeldir.')),
 
     section(_t('Eşitleme')),
     row((sy.provider || 'Bulut') + (sy.account ? ' · ' + sy.account : ''), syncStatus,

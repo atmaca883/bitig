@@ -165,6 +165,31 @@ kasa.onPaired((cl) => {
 
 // ---------- dil ----------
 // Seçim tarayıcı deposunda (arayüz açılırken okunur) ve ana süreçte (pencere/bildirim metinleri) saklanır.
+// ---------- telefona kur (QR) ----------
+const PHONE_APP_URL = 'https://atmaca883.github.io/bitig/';
+function qrSvg(text) {
+  const q = qrcode(0, 'M');
+  q.addData(text);
+  q.make();
+  return q.createSvgTag({ cellSize: 6, margin: 4, scalable: true });
+}
+
+async function showPhoneQr() {
+  const sy = await kasa.sync.status();
+  const cloud = sy.clouds?.[sy.provider]?.label;
+  const done = ask(_t('Telefona kur'), '', [{ label: _t('Tamam'), value: true, primary: true }]);
+  const box = h('div', { class: 'qr-box' });
+  box.innerHTML = qrSvg(PHONE_APP_URL); // kendi ürettiğimiz SVG
+  $('#dialog .dialog-card h3')?.after(h('div', { class: 'phone-qr' }, box,
+    h('ol', { class: 'steps' },
+      h('li', null, _t('Telefonunun kamerasıyla bu kodu okut.')),
+      h('li', null, _t('Açılan sayfada Bitig’i ana ekrana ekle (sayfa nasıl yapılacağını gösterir).')),
+      h('li', null, cloud ? _t('Ana ekrandaki Bitig’i aç, {0} seçeneğini seç ve ana şifreni gir.', cloud) : _t('Ana ekrandaki Bitig’i aç, bilgisayardaki bulutun aynısını seç ve ana şifreni gir.'))),
+    !sy.enabled && h('p', { class: 'muted small' }, _t('Not: Telefonun verilerini alabilmesi için önce burada “Eşitleme”yi açıp bir bulut seç.')),
+    h('p', { class: 'muted small' }, PHONE_APP_URL)));
+  return done;
+}
+
 // ---------- içe aktarma ----------
 const IMPORT_HELP = () => [
   ['Chrome', _t('Ayarlar → Otomatik doldurma ve şifreler → Google Şifre Yöneticisi → Ayarlar → Şifreleri dışa aktar')],
@@ -467,6 +492,8 @@ function syncSection(sy, row, toggle, reopen) {
         ...Object.entries(clouds).filter(([id, c]) => c.available || id === provider).map(([id, c]) => choose(id, c.label)),
         choose('folder', _t('Klasör')))),
     sy.enabled && (cloud ? cloudBlock(provider) : folderBlock),
+    row(_t('Telefona kur'), _t('QR kodu telefonun kamerasıyla okut'),
+      h('button', { class: 'mini primary-mini', type: 'button', onclick: () => showPhoneQr() }, _t('QR göster'))),
     sy.enabled && row(_t('Bu cihazın adı'), sy.deviceName,
       h('button', { class: 'mini', type: 'button', onclick: async () => {
         let name = '';

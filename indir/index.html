@@ -58,6 +58,10 @@
     .others h3 { margin: 28px 0 4px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
     .privacy { display: flex; gap: 12px; align-items: flex-start; }
     .privacy .ico { font-size: 22px; line-height: 1.3; }
+    .qr { display: flex; align-items: center; gap: 16px; margin: 12px 0 4px; }
+    .qr-img { flex: none; width: 128px; height: 128px; background: #fff; border-radius: 12px; padding: 6px; }
+    .qr-img svg { width: 100%; height: 100%; display: block; }
+    @media (max-width: 520px) { .qr { display: none; } }
     footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 36px; }
     footer button { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 4px; }
   </style>
@@ -87,6 +91,7 @@
     </footer>
   </div>
 
+  <script src="../qrcode.js"></script>
   <script>
   (function () {
     'use strict';
@@ -122,6 +127,7 @@
         extTitle: 'Tarayıcı eklentisi', extText: 'Chrome / Edge eklentisi bilgisayardaki Bitig’in içinden kurulur: Bitig → 🌐 Tarayıcı bağlantısı.',
         privacyTitle: 'Verilerin sende kalır',
         privacyText: 'Bitig’in bir sunucusu yok. Kasan kendi cihazlarında ve istersen kendi Dropbox ya da OneDrive hesabında, ana şifrenle şifrelenmiş olarak durur. Kimse — biz dahil — içini göremez.',
+        qrHint: 'Telefonunun kamerasıyla okut; açılan sayfa kurulumu adım adım gösterir.',
         langLabel: 'Türkçe', langBtn: 'English',
       },
       en: {
@@ -152,6 +158,7 @@
         extTitle: 'Browser extension', extText: 'The Chrome / Edge extension is installed from inside Bitig on your computer: Bitig → 🌐 Browser connection.',
         privacyTitle: 'Your data stays with you',
         privacyText: 'Bitig has no server. Your vault lives on your own devices and, if you like, in your own Dropbox or OneDrive — encrypted with your master password. No one, including us, can see inside.',
+        qrHint: 'Scan with your phone’s camera; the page walks you through the setup.',
         langLabel: 'English', langBtn: 'Türkçe',
       },
     };
@@ -193,9 +200,11 @@
         <h2><span class="os">📱</span>${t.phone}</h2>
         <p class="muted small">${t.phoneSub}</p>
         <div class="btns"><a class="btn${main ? '' : ' secondary'}" href="${APP}">${t.phoneBtn}</a></div>
+        ${!main && typeof qrcode === 'function' ? `<div class="qr"><div class="qr-img">${qrSvg(new URL(APP, location.href).href)}</div><p class="muted small">${t.qrHint}</p></div>` : ''}
         <details${main ? ' open' : ''}><summary>${t.how}</summary>${list(steps)}<p class="muted small">${t.phoneNote}</p></details>
       </div>`);
     }
+    function qrSvg(text) { const q = qrcode(0, 'M'); q.addData(text); q.make(); return q.createSvgTag({ cellSize: 5, margin: 3, scalable: true }); }
 
     function render() {
       const t = T[lang];

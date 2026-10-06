@@ -71,12 +71,16 @@
   const deviceNames = () => [...S.remotes.entries()].filter(([id, r]) => r.data && changedFrom.has(id))
     .map(([, r]) => r.device?.name).filter(Boolean).join(', ');
 
-  // Bilgisayarda ana şifre değiştiyse telefon da yeni şifre kilidini alır
-  function adoptWraps(remote) {
-    if (!remote?.password || !S.wraps?.password) return false;
-    if ((remote.password.created || 0) <= (S.wraps.password.created || 0)) return false;
-    S.wraps = { ...S.wraps, password: remote.password, ...(remote.recovery ? { recovery: remote.recovery } : {}) };
-    return true;
+  // Başka cihazda ana şifre ya da kurtarma anahtarı değiştiyse bu cihaz da yeni kilidi alır.
+  // Kilitler buluttaki dosyada açıkta durur; sahte kilit konamasın diye parmak izleri dosyanın şifreli bölümündedir (wrapsHash).
+  const wrapsHash = (w) => C.sha256Hex(JSON.stringify(w));
+  async function adoptWraps(remote, hash) {
+    if (!remote?.password || !S.wraps?.password || !hash || (await wrapsHash(remote)) !== hash) return false;
+    let changed = false;
+    for (const k of ['password', 'recovery']) {
+      if (remote[k] && (remote[k].created || 0) > (S.wraps[k]?.created || 0)) { S.wraps = { ...S.wraps, [k]: remote[k] }; changed = true; }
+    }
+    return changed;
   }
 
   async function readRemotes(files) {
@@ -97,7 +101,7 @@
         if (payload.kasaSync !== 1 || !payload.data) throw new Error('biçim');
         S.remotes.set(m[1], { version, data: payload.data, device: payload.device, savedAt: payload.savedAt, error: '' });
         changedFrom.add(m[1]);
-        if (adoptWraps(file.wraps)) wrapsChanged = true;
+        if (await adoptWraps(file.wraps, payload.wrapsHash)) wrapsChanged = true;
       } catch (e) {
         if (e?.authLost) throw e;
         S.remotes.set(m[1], { version, data: null, device: { id: m[1], name: _t('Bilinmeyen cihaz') }, savedAt: f.modified,
@@ -114,8 +118,9 @@
     clearTimeout(S.uploadTimer);
     if (!S.dek || !drive()?.isConnected()) return;
     try {
-      const payload = { kasaSync: 1, device: { id: settings.deviceId, name: settings.deviceName, platform }, savedAt: Date.now(), data: S.data };
-      await drive().write(ownName(), JSON.stringify(await C.buildFile(S.dek, syncWraps(S.wraps), payload)));
+      const wraps = syncWraps(S.wraps);
+      const payload = { kasaSync: 1, device: { id: settings.deviceId, name: settings.deviceName, platform }, savedAt: Date.now(), data: S.data, wrapsHash: await wrapsHash(wraps) };
+      await drive().write(ownName(), JSON.stringify(await C.buildFile(S.dek, wraps, payload)));
       S.dirty = false;
       S.needsReconnect = false;
       S.lastUpload = Date.now();
@@ -227,6 +232,53 @@
     S.bioAuthUntil = 0;
   }
 
+  // Telefondan ilk kurulum: bulutta Bitig yoksa yeni kasa (bilgisayarla aynı biçim; bilgisayar sonra buna katılabilir)
+  function welcomeData() {
+    const now = Date.now();
+    return {
+      projects: [], passwords: [], tasks: [],
+      notes: [{ id: crypto.randomUUID(), title: _t('Hoş geldin 👋'), body: _t('Bitig’e hoş geldin. Şifrelerini, notlarını ve görevlerini burada tut; hepsi ana şifrenle şifrelenir.\n\n• ＋ ile yeni kayıt ekle.\n• Ayarlar → Verileri taşı ile başka yerden şifrelerini aktar.\n• Bilgisayarda da kullanmak istersen: atmaca883.github.io/bitig/indir'), projectId: '', created: now, updated: now }],
+    };
+  }
+  async function create(password) {
+    if (String(password).length < 8) throw new Error(_t('Ana şifre en az 8 karakter olmalı.'));
+    if (drive()?.isConnected() && (await listVaultFiles()).length) throw new Error(_t('Bu bulutta zaten bir Bitig var; ona katıl.'));
+    const dek = C.random(32);
+    const recoveryKey = C.newRecoveryKey();
+    const wraps = { password: await C.wrapKey(dek, password), recovery: await C.wrapKey(dek, recoveryKey) };
+    Object.assign(S, { dek, wraps, data: welcomeData(), pinRecord: null, pinLocked: false, pinFails: 0 });
+    await persistLocal();
+    await uploadOwn();
+    return { ...unlockedResult(), recoveryKey };
+  }
+
+  // Ana şifre unutulduysa: kurtarma anahtarıyla aç ve yeni ana şifre belirle (bu telefondaki ya da buluttaki kasa)
+  async function recoverWith(files, recoveryKey, newPassword) {
+    if (String(newPassword).length < 8) throw new Error(_t('Ana şifre en az 8 karakter olmalı.'));
+    const key = C.normalizeRecoveryKey(recoveryKey);
+    let dek = null;
+    for (const f of files) {
+      if (!f?.wraps?.recovery) continue;
+      try { dek = await C.unwrapKey(f.wraps.recovery, key); break; } catch {}
+    }
+    if (!dek) { await slowDown(); throw new Error(_t('Kurtarma anahtarı yanlış.')); }
+    let data = null;
+    let wraps = null;
+    for (const f of files) {
+      try {
+        const p = await C.openJson(dek, f.box);
+        const d = p.kasaSync === 1 ? p.data : p;
+        data = data ? Sync.merge(data, d) : d;
+        if (!wraps || (f.wraps.password?.created || 0) > (wraps.password?.created || 0)) wraps = syncWraps(f.wraps);
+      } catch {}
+    }
+    wraps = { ...wraps, password: await C.wrapKey(dek, newPassword) };
+    Object.assign(S, { dek, wraps, data, pinRecord: null, pinLocked: false, pinFails: 0 });
+    await persistLocal();
+    await uploadOwn();
+    return unlockedResult();
+  }
+
   async function verifyPassword(password) {
     if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
     try { await C.unwrapKey(S.wraps.password, password); } catch { await slowDown(); throw new Error(_t('Mevcut ana şifre yanlış.')); }
@@ -241,7 +293,7 @@
   // ---------- arayüzün beklediği API ----------
   root.kasa = {
     vaultExists: async () => !!(await Store.get('vault')),
-    createVault: onlyOnComputer(_t('Yeni kasa oluşturmak')),
+    createVault: (password) => create(password),
     async unlock(password) {
       const file = await Store.get('vault');
       let dek;
@@ -372,9 +424,30 @@
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
       return name;
     },
-    recover: onlyOnComputer(_t('Kurtarma anahtarıyla yeni ana şifre belirlemek')),
-    changePassword: onlyOnComputer(_t('Ana şifreyi değiştirmek')),
-    newRecoveryKey: onlyOnComputer(_t('Kurtarma anahtarı oluşturmak')),
+    async recover(recoveryKey, newPassword) {
+      const local = await Store.get('vault');
+      if (local) return recoverWith([local], recoveryKey, newPassword);
+      const files = [];
+      for (const f of await listVaultFiles()) { try { files.push(JSON.parse(await drive().read(f))); } catch {} }
+      if (!files.length) throw new Error(_t('Bulutta Bitig bulunamadı.'));
+      return recoverWith(files, recoveryKey, newPassword);
+    },
+    async changePassword(current, next) {
+      await verifyPassword(current);
+      if (String(next).length < 8) throw new Error(_t('Ana şifre en az 8 karakter olmalı.'));
+      S.wraps = { ...S.wraps, password: await C.wrapKey(S.dek, next) };
+      await persistLocal();
+      await uploadOwn(); // diğer cihazlar yeni şifreyi eşitlemeyle alır
+      return true;
+    },
+    async newRecoveryKey(password) {
+      await verifyPassword(password);
+      const recoveryKey = C.newRecoveryKey();
+      S.wraps = { ...S.wraps, recovery: await C.wrapKey(S.dek, recoveryKey) };
+      await persistLocal();
+      await uploadOwn();
+      return recoveryKey;
+    },
     restore: onlyOnComputer(_t('Yedekten geri yüklemek')),
     // Şifreli yedek: bu telefondaki kasa dosyası (bilgisayardakiyle aynı biçim; "Yedekten geri yükle" ile açılır)
     async backup() {
@@ -482,6 +555,7 @@
       async reconnect() { if (S.dirty) await uploadOwn(); await drive()?.connect(); },
       async vaultFilesFound() { return (await listVaultFiles()).length; },
       join,
+      create,
       async reset() {
         clearSession();
         await Store.clear();

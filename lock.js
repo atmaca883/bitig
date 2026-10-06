@@ -14,6 +14,7 @@ async function showLock(msg = '') {
   $('#btnBrowser').hidden = true;
   $('#btnSettings').hidden = true;
   $('#lnkForgot').hidden = !vaultExists;
+  $('#lnkJoin').hidden = vaultExists || !kasa.join; // telefonda kurulum ekranı bunu kendisi sunar
   $('#prompts').replaceChildren();   // öneri kartları şifre içerebilir; kilitte temizle
   closeDialog(null);
   $('#lockTitle').textContent = vaultExists ? _t('Tekrar hoş geldin') : _t('Kasanı oluştur');
@@ -118,6 +119,42 @@ $('#lnkForgot').addEventListener('click', async () => {
   if (ok && res) {
     acceptVault(res);
     toast(_t('Bitig açıldı, yeni ana şifren kaydedildi'));
+  }
+});
+
+// Telefonda ya da başka bilgisayarda zaten Bitig varsa: aynı yerden (bulut / klasör) kasaya katıl
+$('#lnkJoin').addEventListener('click', async () => {
+  const st = await kasa.sync.status();
+  const clouds = Object.entries(st.clouds || {}).filter(([, c]) => c.available);
+  const where = await ask(_t('Başka cihazdaki Bitig’e katıl'),
+    _t('Telefonda ya da başka bir bilgisayarda Bitig kullanıyorsan, orada seçili olan yeri seç (o cihazda eşitleme açık olmalı). Sonra ana şifrenle kasana katılırsın.'),
+    [{ label: _t('Vazgeç'), value: null }, { label: _t('Klasör'), value: 'folder' },
+      ...clouds.map(([id, c], i) => ({ label: c.label, value: id, primary: i === clouds.length - 1 }))]);
+  if (!where) return;
+  $('#lockError').textContent = '';
+  let r;
+  try {
+    if (where !== 'folder') toast(_t('Tarayıcıda {0} açıldı; izin verince buraya döner', st.clouds[where].label));
+    r = await kasa.join.start(where);
+  } catch (e) {
+    $('#lockError').textContent = cleanErr(e);
+    return;
+  }
+  if (!r) return;
+  if (!r.found) {
+    $('#lockError').textContent = _t('Orada Bitig bulunamadı. Diğer cihazda eşitlemenin açık ve aynı yerin seçili olduğundan emin ol.');
+    return;
+  }
+  let res = null;
+  const ok = await formDialog({
+    title: _t('Bitig bulundu'),
+    text: _t('{0} içinde {1} cihazın kasası var. Ana şifreni gir.', r.where, r.found),
+    fields: [{ k: 'pw', label: _t('Ana şifre') }], submitLabel: _t('Kasayı aç'),
+    onSubmit: async (v) => { res = await kasa.join.finish(v.pw); },
+  });
+  if (ok && res) {
+    acceptVault(res);
+    toast(_t('Bitig bu bilgisayara kuruldu ✓'));
   }
 });
 
