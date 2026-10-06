@@ -1,4 +1,11 @@
 'use strict';
+
+// Mac'te kısayollar ⌘ ile yazılsın (telefonda kısayol yok)
+if (/Mac/.test(navigator.platform) && !document.body.classList.contains('phone')) {
+  const mac = (s) => s.replace(/Ctrl\+Shift\+Space/g, '⌘⇧Space').replace(/Ctrl\+/g, '⌘');
+  for (const el of document.querySelectorAll('[title*="Ctrl+"]')) el.title = mac(el.title);
+  for (const el of document.querySelectorAll('[placeholder*="Ctrl+"]')) el.placeholder = mac(el.placeholder);
+}
 // Giriş noktası: pencere durumu, üst çubuk, sekmeler, klavye kısayolları ve açılış.
 
 // ---------- pencere durumu ----------

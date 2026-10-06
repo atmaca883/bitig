@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bitig indir</title>
+  <meta name="description" content="Bitig: şifrelerin, notların ve görevlerin tek yerde, uçtan uca şifreli. Windows, Mac, iPhone ve Android.">
+  <link rel="icon" href="../icons/icon-192.png">
+  <meta name="theme-color" content="#15171c">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f6f3; --surface: #fff; --surface-2: #efefeb; --border: #e2e2dc;
+      --text: #1d1f23; --muted: #6b6f78; --accent: #3b6fe0; --accent-2: #5b4fd8; --accent-soft: #e4ecfc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        color-scheme: dark;
+        --bg: #15171c; --surface: #1e2128; --surface-2: #262a32; --border: #2f343e;
+        --text: #e8e9ec; --muted: #9097a3; --accent: #6d97ff; --accent-2: #8b7dff; --accent-soft: #233150;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right)) 56px max(16px, env(safe-area-inset-left)); }
+    header { text-align: center; margin-bottom: 32px; }
+    header img { width: 84px; height: 84px; border-radius: 20px; box-shadow: 0 14px 30px color-mix(in srgb, var(--accent) 35%, transparent); }
+    h1 { font-size: 34px; margin: 14px 0 4px; letter-spacing: .3px; }
+    .tagline { color: var(--muted); margin: 0 auto; max-width: 520px; }
+    .version { color: var(--muted); font-size: 13px; margin-top: 8px; min-height: 1.4em; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      padding: 22px; margin: 16px 0;
+    }
+    .card.main { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+    .card h2 { margin: 0 0 4px; font-size: 20px; display: flex; align-items: center; gap: 10px; }
+    .card h2 .os { font-size: 24px; }
+    .card p { margin: 6px 0; }
+    .muted { color: var(--muted); }
+    .small { font-size: 14px; }
+    .btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 8px; }
+    a.btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; text-decoration: none;
+      font-weight: 600; min-height: 48px;
+    }
+    a.btn.secondary { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+    a.btn:focus-visible { outline: 3px solid var(--accent-soft); outline-offset: 2px; }
+    ol { padding-left: 22px; margin: 8px 0; }
+    li { margin: 4px 0; }
+    details { margin-top: 8px; }
+    summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 15px; }
+    code { background: var(--surface-2); padding: 2px 6px; border-radius: 6px; font-size: 14px; word-break: break-all; }
+    .others h3 { margin: 28px 0 4px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+    .privacy { display: flex; gap: 12px; align-items: flex-start; }
+    .privacy .ico { font-size: 22px; line-height: 1.3; }
+    footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 36px; }
+    footer button { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <img src="../icons/icon-192.png" alt="">
+      <h1>Bitig</h1>
+      <p class="tagline" data-t="tagline">Şifrelerin, notların, görevlerin ve projelerin tek yerde — uçtan uca şifreli.</p>
+      <div class="version" id="version"></div>
+    </header>
+
+    <div id="main"></div>
+    <div class="others" id="others"></div>
+
+    <div class="card privacy">
+      <div class="ico">🔒</div>
+      <div>
+        <b data-t="privacyTitle">Verilerin sende kalır</b>
+        <p class="muted small" data-t="privacyText">Bitig'in bir sunucusu yok. Kasan kendi cihazlarında ve istersen kendi Dropbox ya da OneDrive hesabında, ana şifrenle şifrelenmiş olarak durur. Kimse — biz dahil — içini göremez.</p>
+      </div>
+    </div>
+
+    <footer>
+      <span id="langLabel"></span> · <button type="button" id="langBtn"></button>
+    </footer>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+    const DL = 'https://github.com/atmaca883/bitig/releases/latest/download/';
+    const APP = '../';
+
+    const T = {
+      tr: {
+        tagline: 'Şifrelerin, notların, görevlerin ve projelerin tek yerde — uçtan uca şifreli.',
+        version: (v, d) => 'Sürüm ' + v + ' · ' + d,
+        win: 'Windows', mac: 'Mac', phone: 'iPhone ve Android',
+        winSub: 'Ekranın kenarında duran panel, tarayıcıda şifre doldurma ve Windows Hello ile açma.',
+        winBtn: 'Windows için indir',
+        winSteps: ['İndirilen <b>Bitig-Windows.exe</b>’yi aç; kendiliğinden kurulur.',
+          'Windows mavi bir “Windows bilgisayarınızı korudu” uyarısı gösterirse <b>Ek bilgi → Yine de çalıştır</b>’a bas. (Uygulama yeni olduğu için Windows henüz tanımıyor.)'],
+        macSub: 'Ekranın kenarında duran panel ve tarayıcıda şifre doldurma.',
+        macBtnArm: 'Apple Silicon (M1–M4)', macBtnIntel: 'Intel Mac',
+        macWhich: 'Hangisi? Sol üstteki  → <b>Bu Mac Hakkında</b>: “Çip: Apple M…” yazıyorsa <b>Apple Silicon</b>, “İşlemci: Intel” yazıyorsa <b>Intel</b>.',
+        macSteps: ['İndirilen dosyayı aç, <b>Bitig</b>’i <b>Uygulamalar</b> klasörüne sürükle.',
+          'İlk açılışta Mac “Apple doğrulayamadı” derse <b>Bitti</b>’ye bas (Çöp Sepeti’ne değil).',
+          '<b>Sistem Ayarları → Gizlilik ve Güvenlik</b>’te aşağı kaydır, Bitig satırında <b>Yine de Aç</b>’a bas. Bu sadece bir kez gerekir.'],
+        macDamaged: '“Bitig hasarlı” uyarısı çıkarsa Terminal’de şunu çalıştırıp tekrar aç:',
+        phoneSub: 'Telefon uygulaması tarayıcıdan kurulur; App Store gerekmez. Face ID / parmak iziyle açılır.',
+        phoneBtn: 'Uygulamayı aç',
+        iosSteps: ['Bu sayfayı <b>Safari</b>’de aç ve “Uygulamayı aç”a dokun.',
+          'Alttaki <b>Paylaş</b> düğmesi → <b>Ana Ekrana Ekle</b> → <b>Ekle</b>.',
+          'Ana ekrandaki <b>Bitig</b> simgesinden aç; bilgisayarındaki Bitig ile aynı bulutu seç.'],
+        androidSteps: ['“Uygulamayı aç”a dokun (Chrome önerilir).',
+          'Sağ üstteki <b>⋮</b> menüsü → <b>Ana ekrana ekle</b> (ya da “Uygulamayı yükle”).',
+          'Ana ekrandaki <b>Bitig</b> simgesinden aç; bilgisayarındaki Bitig ile aynı bulutu seç.'],
+        phoneNote: 'Telefon, bilgisayardaki kasana bulut (Dropbox ya da OneDrive) üzerinden bağlanır. Önce bilgisayarda Bitig’i kurup Ayarlar → Cihazlar arası eşitleme’yi aç.',
+        how: 'Nasıl kurulur?', othersTitle: 'Diğer cihazlar',
+        extTitle: 'Tarayıcı eklentisi', extText: 'Chrome / Edge eklentisi bilgisayardaki Bitig’in içinden kurulur: Bitig → 🌐 Tarayıcı bağlantısı.',
+        privacyTitle: 'Verilerin sende kalır',
+        privacyText: 'Bitig’in bir sunucusu yok. Kasan kendi cihazlarında ve istersen kendi Dropbox ya da OneDrive hesabında, ana şifrenle şifrelenmiş olarak durur. Kimse — biz dahil — içini göremez.',
+        langLabel: 'Türkçe', langBtn: 'English',
+      },
+      en: {
+        tagline: 'Your passwords, notes, tasks and projects in one place — end-to-end encrypted.',
+        version: (v, d) => 'Version ' + v + ' · ' + d,
+        win: 'Windows', mac: 'Mac', phone: 'iPhone and Android',
+        winSub: 'A side panel that stays at the edge of your screen, password filling in the browser, and Windows Hello unlock.',
+        winBtn: 'Download for Windows',
+        winSteps: ['Open the downloaded <b>Bitig-Windows.exe</b>; it installs by itself.',
+          'If Windows shows a blue “Windows protected your PC” warning, click <b>More info → Run anyway</b>. (The app is new, so Windows doesn’t recognise it yet.)'],
+        macSub: 'A side panel that stays at the edge of your screen and password filling in the browser.',
+        macBtnArm: 'Apple Silicon (M1–M4)', macBtnIntel: 'Intel Mac',
+        macWhich: 'Which one?  menu → <b>About This Mac</b>: “Chip: Apple M…” means <b>Apple Silicon</b>, “Processor: Intel” means <b>Intel</b>.',
+        macSteps: ['Open the downloaded file and drag <b>Bitig</b> into <b>Applications</b>.',
+          'If the Mac says “Apple could not verify” on first launch, click <b>Done</b> (not Move to Trash).',
+          'Go to <b>System Settings → Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b> next to Bitig. You only need to do this once.'],
+        macDamaged: 'If you see “Bitig is damaged”, run this in Terminal and open it again:',
+        phoneSub: 'The phone app installs from the browser — no App Store needed. Unlocks with Face ID / fingerprint.',
+        phoneBtn: 'Open the app',
+        iosSteps: ['Open this page in <b>Safari</b> and tap “Open the app”.',
+          'Tap <b>Share</b> → <b>Add to Home Screen</b> → <b>Add</b>.',
+          'Open <b>Bitig</b> from your home screen and choose the same cloud as on your computer.'],
+        androidSteps: ['Tap “Open the app” (Chrome recommended).',
+          'Top-right <b>⋮</b> menu → <b>Add to Home screen</b> (or “Install app”).',
+          'Open <b>Bitig</b> from your home screen and choose the same cloud as on your computer.'],
+        phoneNote: 'The phone connects to your vault on your computer through your cloud (Dropbox or OneDrive). Install Bitig on your computer first and turn on Settings → Sync across devices.',
+        how: 'How to install?', othersTitle: 'Other devices',
+        extTitle: 'Browser extension', extText: 'The Chrome / Edge extension is installed from inside Bitig on your computer: Bitig → 🌐 Browser connection.',
+        privacyTitle: 'Your data stays with you',
+        privacyText: 'Bitig has no server. Your vault lives on your own devices and, if you like, in your own Dropbox or OneDrive — encrypted with your master password. No one, including us, can see inside.',
+        langLabel: 'English', langBtn: 'Türkçe',
+      },
+    };
+
+    let lang = /^tr/i.test(navigator.language) ? 'tr' : 'en';
+    try { lang = localStorage.getItem('bitig.lang') || lang; } catch {}
+
+    const ua = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    const os = isIOS ? 'ios' : /Android/.test(ua) ? 'android' : /Mac/.test(navigator.platform || ua) ? 'mac' : /Win/.test(navigator.platform || ua) ? 'win' : 'other';
+
+    const el = (html) => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; };
+    const list = (items) => '<ol>' + items.map((i) => '<li>' + i + '</li>').join('') + '</ol>';
+
+    function winCard(t, main) {
+      return el(`<div class="card${main ? ' main' : ''}">
+        <h2><span class="os">🪟</span>${t.win}</h2>
+        <p class="muted small">${t.winSub}</p>
+        <div class="btns"><a class="btn${main ? '' : ' secondary'}" href="${DL}Bitig-Windows.exe">⬇ ${t.winBtn}</a></div>
+        <details${main ? ' open' : ''}><summary>${t.how}</summary>${list(t.winSteps)}</details>
+      </div>`);
+    }
+    function macCard(t, main) {
+      return el(`<div class="card${main ? ' main' : ''}">
+        <h2><span class="os">💻</span>${t.mac}</h2>
+        <p class="muted small">${t.macSub}</p>
+        <div class="btns">
+          <a class="btn${main ? '' : ' secondary'}" href="${DL}Bitig-Mac-AppleSilicon.dmg">⬇ ${t.macBtnArm}</a>
+          <a class="btn secondary" href="${DL}Bitig-Mac-Intel.dmg">⬇ ${t.macBtnIntel}</a>
+        </div>
+        <p class="muted small">${t.macWhich}</p>
+        <details${main ? ' open' : ''}><summary>${t.how}</summary>${list(t.macSteps)}
+          <p class="small">${t.macDamaged}<br><code>xattr -cr /Applications/Bitig.app</code></p></details>
+      </div>`);
+    }
+    function phoneCard(t, main) {
+      const steps = os === 'android' ? t.androidSteps : t.iosSteps;
+      return el(`<div class="card${main ? ' main' : ''}">
+        <h2><span class="os">📱</span>${t.phone}</h2>
+        <p class="muted small">${t.phoneSub}</p>
+        <div class="btns"><a class="btn${main ? '' : ' secondary'}" href="${APP}">${t.phoneBtn}</a></div>
+        <details${main ? ' open' : ''}><summary>${t.how}</summary>${list(steps)}<p class="muted small">${t.phoneNote}</p></details>
+      </div>`);
+    }
+
+    function render() {
+      const t = T[lang];
+      document.documentElement.lang = lang;
+      document.querySelectorAll('[data-t]').forEach((n) => { n.textContent = t[n.dataset.t]; });
+      const cards = { win: winCard, mac: macCard, phone: phoneCard };
+      const first = os === 'mac' ? 'mac' : os === 'ios' || os === 'android' ? 'phone' : 'win';
+      const main = document.getElementById('main');
+      main.replaceChildren(cards[first](t, true));
+      const others = document.getElementById('others');
+      others.replaceChildren(el(`<h3>${t.othersTitle}</h3>`),
+        ...['win', 'mac', 'phone'].filter((k) => k !== first).map((k) => cards[k](t, false)),
+        el(`<div class="card"><h2><span class="os">🧩</span>${t.extTitle}</h2><p class="muted small">${t.extText}</p></div>`));
+      document.getElementById('langLabel').textContent = t.langLabel;
+      document.getElementById('langBtn').textContent = t.langBtn;
+      showVersion();
+    }
+
+    let rel = null;
+    function showVersion() {
+      if (!rel) return;
+      const d = new Date(rel.published_at).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      document.getElementById('version').textContent = T[lang].version(String(rel.tag_name).replace(/^v/, ''), d);
+    }
+    fetch('https://api.github.com/repos/atmaca883/bitig/releases/latest')
+      .then((r) => (r.ok ? r.json() : null)).then((j) => { if (j?.tag_name) { rel = j; showVersion(); } }).catch(() => {});
+
+    document.getElementById('langBtn').addEventListener('click', () => {
+      lang = lang === 'tr' ? 'en' : 'tr';
+      try { localStorage.setItem('bitig.lang', lang); } catch {}
+      render();
+    });
+    render();
+  })();
+  </script>
+</body>
+</html>
