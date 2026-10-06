@@ -23,8 +23,6 @@
   let settings = loadSettings();
   const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {} };
   saveSettings();
-  // Telefonda takvim ilk açılışta küçük başlasın (listeye yer kalsın)
-  try { if (localStorage.getItem('kasa.calCollapsed') === null) localStorage.setItem('kasa.calCollapsed', '1'); } catch {}
 
   const platform = /iPhone|iPad/.test(navigator.userAgent) ? 'ios' : /Android/.test(navigator.userAgent) ? 'android' : 'web';
 

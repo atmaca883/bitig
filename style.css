@@ -185,7 +185,7 @@ textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
 .quick-add input { flex: 1; }
 
 .item {
-  display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 9px; padding: 7px 10px; margin-bottom: 5px;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
   cursor: pointer;
 }
@@ -212,6 +212,10 @@ textarea { resize: vertical; min-height: 90px; line-height: 1.5; }
 .item.done .check { background: var(--ok); border-color: var(--ok); color: #fff; }
 
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+/* Kartlarda etiketler tek satır: sığmayan son etiket (çoğunlukla proje) kısalır, kart iki satıra çıkmaz */
+.item .chips { flex-wrap: nowrap; overflow: hidden; margin-top: 2px; }
+.item .chips .chip { flex-shrink: 0; }
+.item .chips .chip:last-child:not(:first-child) { flex-shrink: 1; min-width: 26px; overflow: hidden; }
 .chip {
   display: inline-flex; align-items: center; gap: 4px; padding: 0 7px; height: 18px; border-radius: 9px;
   background: var(--surface-2); color: var(--muted); font-size: 11px; white-space: nowrap;
@@ -433,10 +437,15 @@ input.mono, .recovery-key { font-family: "Cascadia Mono", Consolas, monospace; l
 .splitter:hover i, .splitter.dragging i { background: var(--accent); }
 body.cal-collapsed .splitter { display: none; }
 body.cal-collapsed .calendar { border-top: 1px solid var(--border); }
+/* Hafta görünümü: tek satır, kendi yüksekliği kadar; bölücü yok */
+body.cal-week .splitter { display: none; }
+body.cal-week .calendar { border-top: 1px solid var(--border); padding-bottom: 8px; }
+.cal-grid.week { flex: none; grid-template-rows: auto 50px; }
+.cal-mode { margin-left: 4px; }
 
 /* ---------- takvim ---------- */
 .calendar {
-  flex: 0 0 50%; min-height: 0; display: flex; flex-direction: column;
+  flex: 0 0 45%; min-height: 0; display: flex; flex-direction: column;
   padding: 4px 10px 10px; background: var(--surface);
 }
 .cal-head { display: flex; align-items: center; gap: 2px; flex: none; }

@@ -1,4 +1,4 @@
-// Alttaki aylık takvim, gün görünümü ve liste/takvim bölücüsü.
+// Alttaki takvim (ay / hafta / kapalı), gün görünümü ve liste/takvim bölücüsü.
 'use strict';
 
 // ---------- takvim ----------
@@ -13,14 +13,31 @@ let selectedDay = null;
 
 let calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-let calCollapsed = false;
+// Hafta görünümünde gösterilen haftanın pazartesisi
+const mondayOf = (d) => { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+let calWeek = mondayOf(new Date());
 
-let calRatio = 50;
+// Görünüm: "month" | "week" | "collapsed". Kullanıcı seçmediyse panelin yüksekliğine göre kendiliğinden seçilir.
+const CAL_MODES = ['month', 'week', 'collapsed'];
+let calModeChoice = null;
+
+let calRatio = 45;
 
 try {
-  calCollapsed = localStorage.getItem('kasa.calCollapsed') === '1';
-  calRatio = Number(localStorage.getItem('kasa.calRatio')) || 50;
+  calModeChoice = localStorage.getItem('kasa.calMode');
+  if (!CAL_MODES.includes(calModeChoice)) calModeChoice = localStorage.getItem('kasa.calCollapsed') === '1' ? 'collapsed' : null;
+  calRatio = Number(localStorage.getItem('kasa.calRatio')) || 45;
 } catch {}
+
+// Liste için yer kalsın: uzun panelde ay, orta boyda tek satırlık hafta, kısa panelde yalnızca başlık
+function autoCalMode() {
+  const h = $('#split')?.getBoundingClientRect().height || window.innerHeight;
+  // Telefonda liste daha önemli: ay görünümü yalnızca uzun ekranlarda (tablet)
+  const monthFrom = document.body.classList.contains('phone') ? 760 : 640;
+  return h >= monthFrom ? 'month' : h >= 400 ? 'week' : 'collapsed';
+}
+const calMode = () => calModeChoice || autoCalMode();
+let lastCalMode = null;
 
 const dayOf = (ms) => (ms ? localDate(new Date(ms)) : '');
 
@@ -56,6 +73,7 @@ function selectDay(day) {
   if (day) {
     const d = new Date(day + 'T00:00');
     calMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    calWeek = mondayOf(d);
     query = '';
     $('#search').value = '';
   }
@@ -63,66 +81,110 @@ function selectDay(day) {
   $('#content').scrollTop = 0;
 }
 
-function shiftMonth(n) {
-  calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1);
+// ‹ › : ay görünümünde bir ay, hafta görünümünde bir hafta
+function shiftCal(n) {
+  if (calMode() === 'week') {
+    calWeek = new Date(calWeek.getFullYear(), calWeek.getMonth(), calWeek.getDate() + 7 * n);
+    calMonth = new Date(calWeek.getFullYear(), calWeek.getMonth(), 1);
+  } else {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1);
+  }
   renderCalendar();
 }
 
 function applySplit() {
-  $('#calendar').style.flexBasis = calCollapsed ? 'auto' : calRatio + '%';
-  document.body.classList.toggle('cal-collapsed', calCollapsed);
+  const mode = calMode();
+  // Hafta ve kapalı görünüm kendi yüksekliği kadar yer kaplar; bölücü yalnızca ay görünümünde
+  $('#calendar').style.flexBasis = mode === 'month' ? calRatio + '%' : 'auto';
+  document.body.classList.toggle('cal-collapsed', mode === 'collapsed');
+  document.body.classList.toggle('cal-week', mode === 'week');
 }
 
-function toggleCalendar() {
-  calCollapsed = !calCollapsed;
-  try { localStorage.setItem('kasa.calCollapsed', calCollapsed ? '1' : '0'); } catch {}
-  applySplit();
+function setCalMode(mode) {
+  calModeChoice = mode;
+  try { localStorage.setItem('kasa.calMode', mode); } catch {}
   renderCalendar();
+}
+
+// Kapalıyken açınca: daha önce seçilen görünüm ya da panele uygun olan (kapalı değil)
+const openMode = () => (autoCalMode() === 'month' ? 'month' : 'week');
+
+function toggleCalendar() {
+  setCalMode(calMode() === 'collapsed' ? openMode() : 'collapsed');
+}
+
+const shortMonth = (d) => d.toLocaleDateString(KasaI18n.locale(), { day: 'numeric', month: 'short' });
+function weekTitle() {
+  const end = new Date(calWeek.getFullYear(), calWeek.getMonth(), calWeek.getDate() + 6);
+  const sameMonth = end.getMonth() === calWeek.getMonth();
+  return (sameMonth ? calWeek.getDate() : shortMonth(calWeek)) + ' – ' + shortMonth(end);
+}
+
+function dayCell(d, idx, { outOf = null } = {}) {
+  const today = todayStr();
+  const day = localDate(d);
+  const e = idx.get(day);
+  const types = e ? Object.keys(TYPE_META).filter((k) => e[k].size) : [];
+  const summary = types.map((k) => `${e[k].size} ${TYPE_META[k].label.toLocaleLowerCase('tr')}`).join(' · ');
+  const cls = ['cal-day', outOf !== null && d.getMonth() !== outOf && 'out', day === today && 'today', day === selectedDay && 'sel',
+    (d.getDay() === 0 || d.getDay() === 6) && 'weekend'].filter(Boolean).join(' ');
+  return h('button', {
+    class: cls, type: 'button', 'data-day': day,
+    title: fmtDayLong(day) + (summary ? '\n' + summary : ''),
+    onclick: () => selectDay(day === selectedDay ? null : day),
+  },
+  h('span', { class: 'cal-num' }, d.getDate()),
+  h('span', { class: 'cal-badges' }, ...types.map((k) => h('span', {
+    class: `cal-badge ${TYPE_META[k].cls}${k === 'task' && e.late ? ' late' : ''}`,
+  }, e[k].size > 1 ? e[k].size : ''))));
 }
 
 function renderCalendar() {
   const cal = $('#calendar');
   if (!db) { cal.replaceChildren(); return; }
+  const mode = calMode();
+  lastCalMode = mode;
   applySplit();
   const y = calMonth.getFullYear();
   const m = calMonth.getMonth();
   const today = todayStr();
+  const week = mode === 'week';
   const head = h('div', { class: 'cal-head' },
-    h('button', { class: 'icon-btn', type: 'button', title: _t('Önceki ay'), onclick: () => shiftMonth(-1) }, '‹'),
-    h('div', { class: 'cal-title' }, calMonth.toLocaleDateString(KasaI18n.locale(), { month: 'long', year: 'numeric' })),
-    h('button', { class: 'icon-btn', type: 'button', title: _t('Sonraki ay'), onclick: () => shiftMonth(1) }, '›'),
+    h('button', { class: 'icon-btn', type: 'button', title: week ? _t('Önceki hafta') : _t('Önceki ay'), onclick: () => shiftCal(-1) }, '‹'),
+    h('div', { class: 'cal-title' }, week ? weekTitle() : calMonth.toLocaleDateString(KasaI18n.locale(), { month: 'long', year: 'numeric' })),
+    h('button', { class: 'icon-btn', type: 'button', title: week ? _t('Sonraki hafta') : _t('Sonraki ay'), onclick: () => shiftCal(1) }, '›'),
     h('span', { class: 'spacer' }),
     h('button', { class: 'mini', type: 'button', onclick: () => selectDay(today) }, _t('Bugün')),
-    h('button', { class: 'icon-btn', type: 'button', title: calCollapsed ? _t('Takvimi aç') : _t('Takvimi küçült'), onclick: toggleCalendar },
-      calCollapsed ? '▴' : '▾'));
-  if (calCollapsed) { cal.replaceChildren(head); return; }
+    mode !== 'collapsed' && h('button', {
+      class: 'mini cal-mode', type: 'button',
+      title: week ? _t('Tüm ayı göster') : _t('Yalnızca bu haftayı göster'),
+      onclick: () => setCalMode(week ? 'month' : 'week'),
+    }, week ? _t('Ay') : _t('Hafta')),
+    h('button', { class: 'icon-btn', type: 'button', title: mode === 'collapsed' ? _t('Takvimi aç') : _t('Takvimi küçült'), onclick: toggleCalendar },
+      mode === 'collapsed' ? '▴' : '▾'));
+  if (mode === 'collapsed') { cal.replaceChildren(head); return; }
 
   const idx = dayIndex();
+  const dows = [_t('Pt'), _t('Sa'), _t('Ça'), _t('Pe'), _t('Cu'), _t('Ct'), _t('Pz')].map((d) => h('div', { class: 'cal-dow' }, d));
+  if (week) {
+    const grid = h('div', { class: 'cal-grid week' }, ...dows);
+    for (let i = 0; i < 7; i++) grid.append(dayCell(new Date(calWeek.getFullYear(), calWeek.getMonth(), calWeek.getDate() + i), idx));
+    cal.replaceChildren(head, grid);
+    return;
+  }
   const legend = h('div', { class: 'cal-legend' },
     ...Object.values(TYPE_META).map((t) => h('span', { class: t.cls }, h('i'), t.label)));
-  const grid = h('div', { class: 'cal-grid' },
-    ...[_t('Pt'), _t('Sa'), _t('Ça'), _t('Pe'), _t('Cu'), _t('Ct'), _t('Pz')].map((d) => h('div', { class: 'cal-dow' }, d)));
   const offset = (new Date(y, m, 1).getDay() + 6) % 7; // hafta pazartesi başlar
-  for (let i = 0; i < 42; i++) {
-    const d = new Date(y, m, 1 - offset + i);
-    const day = localDate(d);
-    const e = idx.get(day);
-    const types = e ? Object.keys(TYPE_META).filter((k) => e[k].size) : [];
-    const summary = types.map((k) => `${e[k].size} ${TYPE_META[k].label.toLocaleLowerCase('tr')}`).join(' · ');
-    const cls = ['cal-day', d.getMonth() !== m && 'out', day === today && 'today', day === selectedDay && 'sel',
-      (d.getDay() === 0 || d.getDay() === 6) && 'weekend'].filter(Boolean).join(' ');
-    grid.append(h('button', {
-      class: cls, type: 'button', 'data-day': day,
-      title: fmtDayLong(day) + (summary ? '\n' + summary : ''),
-      onclick: () => selectDay(day === selectedDay ? null : day),
-    },
-    h('span', { class: 'cal-num' }, d.getDate()),
-    h('span', { class: 'cal-badges' }, ...types.map((k) => h('span', {
-      class: `cal-badge ${TYPE_META[k].cls}${k === 'task' && e.late ? ' late' : ''}`,
-    }, e[k].size > 1 ? e[k].size : '')))));
-  }
+  const weeks = Math.ceil((offset + new Date(y, m + 1, 0).getDate()) / 7); // yalnızca bu ayın haftaları (4–6)
+  const grid = h('div', { class: 'cal-grid', style: `grid-template-rows: auto repeat(${weeks}, minmax(26px, 1fr))` }, ...dows);
+  for (let i = 0; i < weeks * 7; i++) grid.append(dayCell(new Date(y, m, 1 - offset + i), idx, { outOf: m }));
   cal.replaceChildren(head, legend, grid);
 }
+
+// Panel boyu değişince (kullanıcı seçmediyse) uygun görünüme geç
+addEventListener('resize', () => {
+  if (db && !calModeChoice && autoCalMode() !== lastCalMode) renderCalendar();
+});
 
 // Seçilen günün ayrıntısı (üst bölümde)
 function renderDay(c) {

@@ -139,6 +139,9 @@
     'Benzer bir not var': 'A similar note exists', '“{0}” aynı başlığa ya da içeriğe sahip.': '“{0}” has the same title or content.',
     'Mevcut notu aç': 'Open the existing note', 'Bu isimde bir proje zaten var': 'A project with this name already exists',
     '“{0}” boş olamaz': '“{0}” can’t be empty', 'Kaydedildi': 'Saved', 'Kaydedilemedi: ': 'Could not save: ', 'Silindi': 'Deleted',
+    // takvim görünümü
+    'Önceki hafta': 'Previous week', 'Sonraki hafta': 'Next week', 'Tüm ayı göster': 'Show the whole month',
+    'Yalnızca bu haftayı göster': 'Show only this week', 'Ay': 'Month', 'Hafta': 'Week',
     // Face ID / parmak izi
     'Windows Hello bekleniyor…': 'Waiting for Windows Hello…',
     'Windows Hello onayı verilmedi.': 'Windows Hello was not confirmed.',
