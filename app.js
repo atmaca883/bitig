@@ -38,7 +38,7 @@ function showBanner(r) {
     h('span', null, '⏰ ' + r.title),
     h('button', { class: 'mini', onclick: () => {
       const t = db?.tasks.find((x) => x.id === r.id);
-      if (t) { setDone(t, true); persist(); render(); }
+      if (t && !t.done) { completeTask(t); persist(); render(); }
       b.hidden = true;
     } }, _t('Tamamlandı')),
     h('button', { class: 'mini', onclick: () => { b.hidden = true; } }, _t('Tamam')),
@@ -138,7 +138,8 @@ window.addEventListener('keydown', (e) => {
     if (editing) closeEditor();
     else if (query) { query = ''; $('#search').value = ''; render(); }
     else kasa.win.collapse();
-  } else if (e.key === 'Enter' && editing && e.target.tagName === 'INPUT' && e.target.type !== 'button') {
+  } else if (e.key === 'Enter' && editing && !e.defaultPrevented && !e.target.closest('.checklist') && e.target.tagName === 'INPUT' && e.target.type !== 'button') {
+    // (Enter'ı kendisi işleyen kutular — ör. "Madde ekle" — preventDefault der; onlarda kaydetme)
     e.preventDefault();
     saveEditor();
   }

@@ -106,7 +106,8 @@ async function showSetup(msg = '') {
   setupShell(
     brandHero(),
     h('h1', null, _t('Bu telefona kur')),
-    h('p', { class: 'muted' }, _t('Bitig verilerini senin bulutunda (Dropbox ya da OneDrive) şifreli olarak saklar; bulut içini göremez. Bilgisayardaki Bitig de aynı buluttan eşitlenir.')),
+    h('p', { class: 'muted' }, _t('Bitig verilerini senin bulutunda ({0}) şifreli olarak saklar; bulut içini göremez. Bilgisayardaki Bitig de aynı buluttan eşitlenir.',
+      drives.filter((d) => d.available() && d.id !== 'dev').map((d) => d.label).join(', '))),
     h('ol', { class: 'steps setup-steps' },
       h('li', null, _t('Aşağıdan bir bulut seç ve hesabınla bağlan.')),
       h('li', null, _t('Bitig zaten varsa ana şifrenle aç; yoksa yeni oluştur.'))),
@@ -325,7 +326,7 @@ window.openSettingsSheet = async function () {
         h('div', { class: 'sub' }, d.error || (d.savedAt ? _t('Son kayıt: ') + fmtStamp(d.savedAt) : _t('Henüz kaydetmedi'))))))),
 
     section(_t('Verileri taşı')),
-    importRow(row),
+    ...importRow(row),
     exportRow(row),
 
     section(_t('Görünüm ve dil')),

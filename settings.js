@@ -73,7 +73,7 @@ async function openSettingsSheet() {
     ...syncSection(sy, row, toggle, reopen),
 
     section(_t('Verileri taşı')),
-    importRow(row),
+    ...importRow(row),
     exportRow(row),
 
     section(_t('Görünüm ve dil')),
@@ -303,9 +303,13 @@ function exportRow(row) {
 }
 
 function importRow(row) {
-  return row(_t('Başka yerden içe aktar'), _t('Chrome, Edge, Firefox, Safari, Bitwarden, 1Password, LastPass, KeePass (CSV)'),
-    h('button', { class: 'mini', type: 'button', onclick: () => importHelp() }, _t('Nasıl?')),
-    h('button', { class: 'mini primary-mini', type: 'button', onclick: () => importFlow() }, _t('İçe aktar')));
+  return [
+    row(_t('Başka yerden içe aktar'), _t('Chrome, Edge, Firefox, Safari, Bitwarden, 1Password, LastPass, KeePass (CSV)'),
+      h('button', { class: 'mini', type: 'button', onclick: () => importHelp() }, _t('Nasıl?')),
+      h('button', { class: 'mini primary-mini', type: 'button', onclick: () => importFlow() }, _t('İçe aktar'))),
+    row(_t('Google Authenticator’dan aktar'), _t('2FA kodlarını QR kodla taşı'),
+      h('button', { class: 'mini', type: 'button', onclick: () => gauthImport() }, _t('QR tara'))),
+  ];
 }
 
 // ---------- güncellemeler ----------
@@ -433,7 +437,7 @@ function syncSection(sy, row, toggle, reopen) {
     onclick: async () => { if (provider !== p) { await kasa.sync.set({ provider: p }); reopen(); } },
   }, label);
 
-  // Doğrudan bağlanılan bulutlar (Dropbox, OneDrive). Bu sürümde anahtarı olmayan bulut seçeneklerde görünmez.
+  // Doğrudan bağlanılan bulutlar (Dropbox, OneDrive, Google Drive). Bu sürümde anahtarı olmayan bulut seçeneklerde görünmez.
   const clouds = sy.clouds || { dropbox: { label: 'Dropbox', available: sy.dropboxAvailable, email: sy.dropboxEmail } };
   const cloud = clouds[provider];
 
@@ -456,12 +460,14 @@ function syncSection(sy, row, toggle, reopen) {
     if (!c.available) return h('p', { class: 'muted small' }, _t('Bu sürümde {0} bağlantısı henüz etkin değil.', c.label));
     if (!c.email) {
       return h('div', { class: 'setting col' },
-        h('div', { class: 'sub' }, _t('Bitig, {0} hesabında sadece kendine ait “Uygulamalar/Bitig” klasörünü kullanır; diğer dosyalarını göremez.', c.label)),
+        h('div', { class: 'sub' }, c.folder
+          ? _t('Bitig, {0} hesabında sadece kendi açtığı “{1}” klasörünü ve dosyalarını görür; diğer dosyalarına erişemez.', c.label, c.folder)
+          : _t('Bitig, {0} hesabında sadece kendine ait “Uygulamalar/Bitig” klasörünü kullanır; diğer dosyalarını göremez.', c.label)),
         h('button', { class: 'primary', type: 'button', onclick: (e) => connectCloud(id, e.currentTarget) }, _t('{0} hesabına bağlan', c.label)));
     }
     return h('div', { class: 'setting col' },
       h('div', { class: 'sub' }, sy.needsReconnect ? _t('⚠ {0} bağlantısı sona erdi', c.label) : _t('Bağlı {0} hesabı', c.label)),
-      h('div', { class: 'path' }, c.email + _t(' · Uygulamalar/Bitig klasörü')),
+      h('div', { class: 'path' }, c.email + (c.folder ? _t(' · {0} klasörü', c.folder) : _t(' · Uygulamalar/Bitig klasörü'))),
       h('div', { class: 'group-actions' },
         sy.needsReconnect && h('button', { class: 'mini primary-mini', type: 'button', onclick: (e) => connectCloud(id, e.currentTarget) }, _t('Yeniden bağlan')),
         !sy.needsReconnect && nowBtn,
@@ -473,10 +479,15 @@ function syncSection(sy, row, toggle, reopen) {
         } }, _t('Bağlantıyı kes'))));
   };
 
+  const inICloud = !!sy.icloudDir && sy.dir.toLowerCase().startsWith(sy.icloudDir.toLowerCase());
   const folderBlock = h('div', { class: 'setting col' },
-    h('div', { class: 'sub' }, _t('Eşitleme klasörü (OneDrive, Google Drive, iCloud ya da Dropbox masaüstü programının klasörü)')),
+    h('div', { class: 'sub' }, inICloud ? _t('iCloud Drive klasörü') : _t('Eşitleme klasörü (OneDrive, Google Drive, iCloud ya da Dropbox masaüstü programının klasörü)')),
     h('div', { class: 'path' }, sy.dir),
     h('div', { class: 'group-actions' },
+      sy.icloudDir && !inICloud && h('button', { class: 'mini primary-mini', type: 'button', onclick: async () => {
+        try { await kasa.sync.useICloud(); toast(_t('✓ iCloud Drive klasörü seçildi')); } catch (e) { toast(cleanErr(e)); }
+        reopen();
+      } }, _t('iCloud Drive’ı kullan')),
       h('button', { class: 'mini', type: 'button', onclick: async () => { await kasa.sync.chooseDir(); reopen(); } }, _t('Değiştir')),
       h('button', { class: 'mini', type: 'button', onclick: () => kasa.sync.openDir() }, _t('Klasörü aç')),
       nowBtn));
@@ -509,6 +520,7 @@ function syncSection(sy, row, toggle, reopen) {
       ? _t('Açınca kasan şifreli olarak buluta da yazılır; telefonun ve diğer bilgisayarların değişiklikleri buradan birleşir.')
       : cloud
         ? (others.length ? '' : _t('Henüz başka cihaz yok. ')) + _t('Telefonda Bitig’i kurarken {0} seçeneğini seç. Her cihaz kendi şifreli dosyasını yazar; {0} içeriği göremez.', cloud.label)
-        : _t('Klasör yolu yalnızca bilgisayarlar arasında çalışır. Telefonla eşitlemek için şunlardan birini seç: {0}.', cloudNames.join(', '))),
+        : (inICloud ? _t('iPhone’daki Bitig iCloud’a bağlanamaz (Apple buna izin vermiyor). ') : '')
+          + _t('Klasör yolu yalnızca bilgisayarlar arasında çalışır. Telefonla eşitlemek için şunlardan birini seç: {0}.', cloudNames.join(', '))),
   ].filter(Boolean);
 }

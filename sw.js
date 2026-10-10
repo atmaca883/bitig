@@ -1,6 +1,6 @@
-// Bitig çevrimdışı önbelleği — sürüm 202610061751
-const CACHE = 'kasa-202610061751';
-const FILES = ["./","app.js","backend.js","biometric.js","brand.js","calendar.js","cloud-dropbox.js","cloud-onedrive.js","config.js","creds.js","crypto.js","dialogs.js","drive.js","editor.js","i18n.js","icons/apple-touch-icon.png","icons/icon-192.png","icons/icon-512.png","icons/icon-maskable-512.png","importer.js","index.html","jsqr.js","kasa-core.js","kdf-worker.js","lock.js","manifest.webmanifest","phone-ui.js","phone.css","qrcode.js","qrscan.js","rows.js","settings.js","state.js","store.js","strength.js","style.css","sync-merge.js","theme.js","totp.js","trash.js","util.js","vendor/scrypt-LICENSE.txt","vendor/scrypt.js","views.js"];
+// Bitig çevrimdışı önbelleği — sürüm 202610101735
+const CACHE = 'kasa-202610101735';
+const FILES = ["./","app.js","backend.js","biometric.js","brand.js","calendar.js","cloud-dropbox.js","cloud-google.js","cloud-onedrive.js","config.js","creds.js","crypto.js","dialogs.js","drive.js","editor.js","gauth.js","i18n.js","icons/apple-touch-icon.png","icons/icon-192.png","icons/icon-512.png","icons/icon-maskable-512.png","importer.js","index.html","jsqr.js","kasa-core.js","kdf-worker.js","lock.js","manifest.webmanifest","phone-ui.js","phone.css","qrcode.js","qrscan.js","recur.js","rows.js","settings.js","state.js","store.js","strength.js","style.css","sync-merge.js","theme.js","totp.js","trash.js","util.js","vendor/scrypt-LICENSE.txt","vendor/scrypt.js","views.js"];
 self.addEventListener('install', (e) => {
   // Tarayıcının HTTP önbelleğini atla: yoksa yeni sürümün içine eski bir dosya (ör. phone.css) karışabilir
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting()));

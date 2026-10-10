@@ -233,7 +233,7 @@ const TODAY_CARDS = {
   },
   doneToday: {
     title: _t('Bugün tamamlananlar'),
-    data: () => nonEmpty(db.tasks.filter((x) => x.done && inFilter(x) && dayOf(x.completedAt) === todayStr())),
+    data: () => nonEmpty(db.tasks.filter((x) => inFilter(x) && ((x.done && dayOf(x.completedAt) === todayStr()) || (x.history || []).some((ms) => dayOf(ms) === todayStr())))),
     render: (list) => h('div', null, ...list.map((x) => taskRow(x))),
   },
   projects: {

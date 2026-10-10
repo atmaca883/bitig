@@ -58,6 +58,7 @@ function dayIndex() {
     if (!inFilter(t)) continue;
     add(t.due, 'task', t);
     add(dayOf(t.completedAt), 'task', t);
+    for (const ms of t.history || []) add(dayOf(ms), 'task', t); // tekrarlayan görev: her tamamlandığı gün
     if (!t.done && t.due && t.due < t0) map.get(t.due).late = true;
   }
   for (const n of db.notes) if (inFilter(n)) { add(dayOf(n.created), 'note', n); add(dayOf(n.updated), 'note', n); }

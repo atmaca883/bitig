@@ -7,6 +7,7 @@ const FORMS = {
     fields: [
       { k: 'title', label: _t('Görev'), type: 'text', req: true, ph: _t('Ne yapılacak?') },
       { k: 'due', label: _t('Son tarih'), type: 'date' },
+      { k: 'repeat', label: _t('Tekrar'), type: 'repeat' },
       { k: 'remindAt', label: _t('Hatırlat'), type: 'datetime-local' },
       { k: 'projectId', label: _t('Proje'), type: 'project' },
       { k: 'note', label: _t('Not'), type: 'textarea' },
@@ -99,6 +100,12 @@ function buildField(f, value) {
       h('button', { type: 'button', class: 'mini', title: _t('Kopyala'),
         onclick: () => { if (input.value) { kasa.copy(input.value, true); toast(_t('Şifre kopyalandı · 30 sn sonra silinecek')); } } }, '⧉')),
       strengthMeter(input));
+  } else if (f.type === 'repeat') {
+    input = h('select', { 'data-k': f.k },
+      h('option', { value: '' }, _t('Tekrarlanmaz')),
+      ...Object.entries(REPEAT_LABELS()).map(([k, l]) => h('option', { value: k }, l)));
+    input.value = value || '';
+    label.append(input);
   } else if (f.type === 'totp') {
     // Sitenin verdiği anahtar ya da otpauth:// adresi; QR'dan da eklenebilir. Geçerliyse şu anki kod canlı görünür.
     input = h('input', { type: 'password', 'data-k': f.k, autocomplete: 'off', spellcheck: 'false', placeholder: _t('Anahtar ya da QR kod') });
@@ -139,9 +146,48 @@ function openEditor(type, item = null, extra = {}) {
   $('#sheetDelete').hidden = isNew;
   const form = $('#sheetForm');
   form.replaceChildren(...def.fields.map((f) => buildField(f, draft[f.k])));
+  if (type === 'note') attachChecklist(form);
   if (!isNew) form.append(stampDetails(type, draft));
   $('#sheet').hidden = false;
   form.querySelector('input, textarea')?.focus();
+}
+
+// Notta yapılacak listesi: metindeki "- [ ] madde" satırları kutucuklu gösterilir. İşaretleme kayıtlı notta hemen kaydedilir
+// (alışverişte "Kaydet"e basmayı unutunca kaybolmasın).
+function attachChecklist(form) {
+  const ta = form.querySelector('[data-k="body"]');
+  if (!ta) return;
+  const add = h('input', { type: 'text', class: 'check-add', placeholder: _t('＋ Madde ekle (Enter)') });
+  const panel = h('div', { class: 'checklist' });
+  const saveNow = () => {
+    if (!editing || editing.isNew || editing.type !== 'note') return;
+    editing.item.body = ta.value;
+    editing.item.updated = Date.now();
+    persist();
+  };
+  const draw = () => {
+    const items = KasaList.items(ta.value);
+    panel.replaceChildren(...items.map((it) => {
+      const cb = h('input', { type: 'checkbox' });
+      cb.checked = it.checked;
+      cb.addEventListener('change', () => { ta.value = KasaList.toggle(ta.value, it.line); saveNow(); draw(); });
+      return h('label', { class: 'check-item' + (it.checked ? ' on' : '') }, cb, h('span', null, it.text));
+    }), add);
+  };
+  add.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = add.value.trim();
+    if (!v) return;
+    ta.value = KasaList.add(ta.value, v);
+    add.value = '';
+    saveNow();
+    draw();
+    add.focus();
+  });
+  ta.addEventListener('input', draw);
+  ta.closest('label').before(panel);
+  draw();
 }
 
 // Düzenleme ekranının altındaki zaman bilgisi (otomatik tutulur, elle değiştirilmez)
@@ -239,6 +285,11 @@ async function saveEditor() {
     return;
   }
   if (type === 'note' && !values.title.trim() && !values.body.trim()) { closeEditor(); return; }
+  if (type === 'task') {
+    if (values.repeat && !values.due) values.due = todayStr(); // tekrar için başlangıç günü gerekir
+    // Ayın asıl günü (31 → kısa aylarda son gün, sonra yine 31)
+    values.repeatDay = ['monthly', 'yearly'].includes(values.repeat) ? Number(values.due.slice(8, 10)) : undefined;
+  }
   if (type === 'password') {
     values.totp = (values.totp || '').trim();
     if (values.totp && !KasaTotp.parse(values.totp)) {

@@ -9,13 +9,16 @@ const delBtn = (type, item) => h('button', { class: 'mini del-btn', title: _t('�
 function taskRow(t, { hideProject = false } = {}) {
   return h('div', { class: 'item t-task' + (t.done ? ' done' : ''), onclick: () => openEditor('task', t) },
     h('button', {
-      class: 'check', title: t.done ? _t('Geri al') : 'Tamamla',
+      class: 'check', title: t.done ? _t('Geri al') : _t('Tamamla'),
       onclick: (e) => {
         e.stopPropagation();
-        setDone(t, !t.done);
+        const r = completeTask(t);
         persist();
         render();
-        if (t.done) toast(_t('✓ Tamamlandı'));
+        if (r.next) {
+          toast(_t('✓ Tamamlandı · sonraki: {0}', fmtDate(r.next)),
+            { label: _t('Geri al'), fn: () => { undoComplete(t, r.before); persist(); render(); } });
+        } else if (t.done) toast(_t('✓ Tamamlandı'));
       },
     }, '✓'),
     h('div', { class: 'body' },
@@ -23,6 +26,7 @@ function taskRow(t, { hideProject = false } = {}) {
       h('div', { class: 'chips' },
         !t.done && dueChip(t.due),
         !t.done && t.remindAt && h('span', { class: 'chip' }, '⏰ ' + fmtDateTime(t.remindAt)),
+        t.repeat && h('span', { class: 'chip', title: _t('Tekrarlayan görev') }, '🔁 ' + (REPEAT_LABELS()[t.repeat] || '')),
         t.done ? stampChip(t, t.completedAt || t.updated, '✓ ') : stampChip(t),
         !hideProject && projectChip(t.projectId))),
     h('div', { class: 'side' }, delBtn('task', t)),
@@ -60,13 +64,15 @@ function passwordRow(p, { hideProject = false } = {}) {
 }
 
 function noteRow(n, { hideProject = false } = {}) {
-  const first = (n.body || '').split('\n').find((l) => l.trim()) || _t('Boş not');
+  const first = KasaList.pretty((n.body || '').split('\n').find((l) => l.trim()) || _t('Boş not'));
+  const pr = KasaList.progress(n.body);
   return h('div', { class: 'item t-note', onclick: () => openEditor('note', n) },
     h('div', { class: 'ico' }, '📝'),
     h('div', { class: 'body' },
       h('div', { class: 'title' }, n.title || _t('Başlıksız not')),
       h('div', { class: 'sub' }, first),
       h('div', { class: 'chips' },
+        pr.total && h('span', { class: 'chip' + (pr.done === pr.total ? ' ok' : '') }, `☑ ${pr.done}/${pr.total}`),
         stampChip(n),
         !hideProject && projectChip(n.projectId))),
     h('div', { class: 'side' }, delBtn('note', n)),

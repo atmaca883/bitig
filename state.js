@@ -43,6 +43,34 @@ function setDone(t, done) {
   t.updated = Date.now();
 }
 
+const REPEAT_LABELS = () => ({
+  daily: _t('Her gün'), weekdays: _t('Hafta içi her gün'), weekly: _t('Her hafta'), monthly: _t('Her ay'), yearly: _t('Her yıl'),
+});
+
+// Görevi tamamla. Tekrarlayan görev açık kalır, bir sonraki tarihe geçer (tamamlandığı gün geçmişe yazılır).
+// Dönen: { before (geri almak için), next (tekrarlıysa yeni tarih) }
+function completeTask(t) {
+  const before = { done: t.done, due: t.due, remindAt: t.remindAt, completedAt: t.completedAt, history: t.history, updated: t.updated };
+  if (t.repeat && !t.done) {
+    const now = Date.now();
+    const from = t.due || todayStr();
+    const next = KasaRecur.next(from, t.repeat, todayStr(), t.repeatDay);
+    t.history = [...(t.history || []), now].slice(-60);
+    if (t.remindAt) t.remindAt = KasaRecur.shiftDateTime(t.remindAt, from, next);
+    t.due = next;
+    t.updated = now;
+    return { before, next };
+  }
+  setDone(t, !t.done);
+  return { before };
+}
+
+function undoComplete(t, before) {
+  Object.assign(t, before);
+  if (before.history === undefined) delete t.history;
+  t.updated = Date.now();
+}
+
 function setPassword(p, pw) {
   if (p.password !== pw) p.pwChanged = Date.now();
   p.password = pw;
@@ -59,7 +87,7 @@ function projectActivity(p) {
 function dueChip(due) {
   if (!due) return null;
   const t = todayStr();
-  if (due < t) return h('span', { class: 'chip late' }, 'Gecikti · ' + fmtDate(due));
+  if (due < t) return h('span', { class: 'chip late' }, _t('Gecikti · ') + fmtDate(due));
   if (due === t) return h('span', { class: 'chip today' }, _t('Bugün'));
   if (due === addDays(1)) return h('span', { class: 'chip' }, _t('Yarın'));
   return h('span', { class: 'chip' }, '📅 ' + fmtDate(due));

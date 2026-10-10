@@ -589,6 +589,7 @@ select.compact { width: auto; padding: 5px 8px; }
 .import-help div { display: flex; flex-direction: column; gap: 1px; }
 .import-help b { font-size: 12.5px; }
 .import-help span { color: var(--muted); }
+.gauth-list { max-height: 38vh; overflow-y: auto; padding-right: 4px; }
 
 /* şifre sağlığı */
 .chip.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
@@ -625,3 +626,13 @@ select.compact { width: auto; padding: 5px 8px; }
 .qr-box svg { width: 100%; height: 100%; display: block; }
 .phone-qr .steps { margin: 0; padding-left: 20px; font-size: 13px; }
 .phone-qr p { margin: 0; text-align: center; word-break: break-all; }
+
+/* notta yapılacak listesi */
+.checklist { display: flex; flex-direction: column; gap: 2px; }
+.check-item { display: flex !important; flex-direction: row !important; align-items: center; gap: 9px; padding: 5px 4px; border-radius: 6px;
+  font-size: 13.5px !important; font-weight: 500 !important; color: var(--text) !important; cursor: pointer; }
+.check-item:hover { background: var(--surface-2); }
+.check-item input { width: 17px; height: 17px; margin: 0; accent-color: var(--ok); flex: none; }
+.check-item.on span { text-decoration: line-through; color: var(--muted); }
+.check-add { margin-top: 4px; }
+.chip.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }

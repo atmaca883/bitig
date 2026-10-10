@@ -8,7 +8,7 @@
 //   write(name, metin)
 //   remove(name)
 //   disconnect()
-// Dropbox ve OneDrive hazır; Google Drive bir sonraki aşamada eklenecek.
+// Dropbox, OneDrive ve Google Drive. (iCloud'un web uygulamalarına açık bir bağlantısı yok.)
 (function (root) {
   'use strict';
 
@@ -57,7 +57,8 @@
 
   // lib: KasaDropbox / KasaOneDrive (aynı arayüz). tag: yerel kayıt anahtarlarındaki kısa ad.
   // renewAfterMs: telefonda yenileme anahtarı kısa ömürlüyse (OneDrive: 24 saat) açılışta sessizce yenile.
-  function oauthDrive({ id, label, lib, clientId, endpoints, tag, renewAfterMs = 0 }) {
+  // clientSecret: Google'ın web istemcisi oturum alırken istemci sırrı da ister (yalnızca kayıtlı dönüş adresiyle işe yarar)
+  function oauthDrive({ id, label, lib, clientId, clientSecret = () => undefined, endpoints, tag, renewAfterMs = 0 }) {
     const tokensKey = id + '-tokens';
     const ls = (k) => `kasa.${tag}.${k}`;
     return {
@@ -68,7 +69,7 @@
       get comingSoon() { return !this.available(); }, // anahtar tanımlı değilse "yakında" görünsün
       client() {
         return (this._client ||= lib().createClient({
-          clientId: clientId(), endpoints: endpoints(),
+          clientId: clientId(), clientSecret: clientSecret(), endpoints: endpoints(),
           getTokens: () => root.KasaStore.get(tokensKey),
           saveTokens: (t) => root.KasaStore.set(tokensKey, t),
         }));
@@ -97,7 +98,7 @@
         }
         if (!saved || saved.state !== q.get('state')) throw new Error(_t('{0} girişi doğrulanamadı; tekrar dene.', label));
         const tokens = await lib().exchangeCode({
-          clientId: clientId(), redirectUri: saved.redirect, code: q.get('code'), verifier: saved.verifier, endpoints: endpoints(),
+          clientId: clientId(), clientSecret: clientSecret(), redirectUri: saved.redirect, code: q.get('code'), verifier: saved.verifier, endpoints: endpoints(),
         });
         await root.KasaStore.set(tokensKey, tokens);
         localStorage.setItem(ls('connected'), '1');
@@ -151,7 +152,13 @@
   root.KasaDrives = {
     dropbox: DropboxDrive,
     onedrive: OneDriveDrive,
-    google: comingSoon('google', 'Google Drive'),
+    google: oauthDrive({
+      id: 'google', label: 'Google Drive', tag: 'gd',
+      lib: () => root.KasaGoogle,
+      clientId: () => cfg().googleWeb,
+      clientSecret: () => cfg().googleWebSecret,
+      endpoints: () => cfg().googleEndpoints || root.KasaGoogle.DEFAULT_ENDPOINTS,
+    }),
     dev: DevDrive,
   };
 })(self);

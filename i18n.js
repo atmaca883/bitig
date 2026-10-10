@@ -139,7 +139,10 @@
     'Benzer bir not var': 'A similar note exists', '“{0}” aynı başlığa ya da içeriğe sahip.': '“{0}” has the same title or content.',
     'Mevcut notu aç': 'Open the existing note', 'Bu isimde bir proje zaten var': 'A project with this name already exists',
     '“{0}” boş olamaz': '“{0}” can’t be empty', 'Kaydedildi': 'Saved', 'Kaydedilemedi: ': 'Could not save: ', 'Silindi': 'Deleted',
-    // bilgisayarda buluttan katıl
+    // tekrarlayan görevler, yapılacak listesi
+    'Her gün': 'Every day', 'Hafta içi her gün': 'Every weekday', 'Her hafta': 'Every week', 'Her ay': 'Every month', 'Her yıl': 'Every year',
+    'Tekrar': 'Repeat', 'Tekrarlanmaz': 'Doesn’t repeat', 'Tekrarlayan görev': 'Recurring task', 'Tamamla': 'Complete',
+    '✓ Tamamlandı · sonraki: {0}': '✓ Done · next: {0}', 'Gecikti · ': 'Overdue · ', '＋ Madde ekle (Enter)': '＋ Add item (Enter)',
     'Başka cihazda Bitig’im var': 'I already use Bitig on another device',
     'Diğer cihazın eşitlediği klasörü seç': 'Choose the folder your other device syncs to',
     'Önce kasanın bulunduğu yeri seç.': 'First choose where your vault is.', 'Buluttaki Bitig açılamadı.': 'Couldn’t open the Bitig in the cloud.',
@@ -159,8 +162,8 @@
     'Tüm verilerin bu ana şifreyle şifrelenir. Ana şifre hiçbir yere kaydedilmez; unutursan birazdan vereceğim kurtarma anahtarıyla açabilirsin.':
       'All your data is encrypted with this master password. It isn’t stored anywhere; if you forget it, you can open your vault with the recovery key you’ll get next.',
     'Bitig bu telefonda oluşturuldu ✓': 'Bitig was created on this phone ✓',
-    'Bitig verilerini senin bulutunda (Dropbox ya da OneDrive) şifreli olarak saklar; bulut içini göremez. Bilgisayardaki Bitig de aynı buluttan eşitlenir.':
-      'Bitig keeps your data encrypted in your own cloud (Dropbox or OneDrive); the cloud can’t see inside. Bitig on your computer syncs from the same cloud.',
+    'Bitig verilerini senin bulutunda ({0}) şifreli olarak saklar; bulut içini göremez. Bilgisayardaki Bitig de aynı buluttan eşitlenir.':
+      'Bitig keeps your data encrypted in your own cloud ({0}); the cloud can’t see inside. Bitig on your computer syncs from the same cloud.',
     'Aşağıdan bir bulut seç ve hesabınla bağlan.': 'Choose a cloud below and sign in.',
     'Bitig zaten varsa ana şifrenle aç; yoksa yeni oluştur.': 'If you already have a Bitig, open it with your master password; otherwise create a new one.',
     'Değişiklik diğer cihazlara da eşitlenir': 'The change syncs to your other devices',
@@ -191,7 +194,24 @@
     'QR kodu çerçevenin içine getir': 'Fit the QR code inside the frame',
     'Kameraya erişilemedi. Ayarlar’dan kamera iznini aç ya da “Fotoğraftan” seçeneğini kullan.': 'Couldn’t access the camera. Allow camera access in Settings or use “From photo”.',
     'Görüntüde QR kod bulunamadı.': 'No QR code found in the image.',
-    'Bu, Google Authenticator’ın toplu aktarma kodu; şimdilik desteklenmiyor. Sitenin kendi 2FA QR kodunu kullan.': 'This is a Google Authenticator bulk-transfer code; it isn’t supported yet. Use the site’s own 2FA QR code.',
+    // ---- Google Authenticator'dan aktarma
+    'Google Authenticator’dan aktar': 'Import from Google Authenticator', '2FA kodlarını QR kodla taşı': 'Move your 2FA codes with a QR code',
+    'QR tara': 'Scan QR', 'Sıradaki QR kod': 'Next QR code', 'Bitir': 'Finish', 'Aktar': 'Import', 'Aktarma tamam': 'Import complete',
+    'Google Authenticator’da “İleri”ye basıp sıradaki QR kodu ({0}/{1}) tara.': 'In Google Authenticator, press “Next” and scan the next QR code ({0}/{1}).',
+    'Google Authenticator’da ☰ → Hesapları aktar → Hesapları dışa aktar’a dokun, hesapları seçip İleri’ye bas. Uygulama başka bir telefondaysa çıkan QR kodu bu telefonun kamerasıyla tara; bu telefondaysa ekran görüntüsünü alıp Fotoğraftan seç.':
+      'In Google Authenticator, tap ☰ → Transfer accounts → Export accounts, select the accounts and tap Next. If the app is on another phone, scan the QR code with this phone’s camera; if it’s on this phone, take a screenshot and choose From photo.',
+    'Telefonda Google Authenticator’ı aç: ☰ → Hesapları aktar → Hesapları dışa aktar, hesapları seçip İleri’ye bas. Çıkan QR kodu bilgisayarın kamerasına göster ya da fotoğrafını çekip bilgisayara at (Görüntü dosyası / Panodan oku).':
+      'Open Google Authenticator on your phone: ☰ → Transfer accounts → Export accounts, select the accounts and tap Next. Hold the QR code up to the computer’s camera, or take a photo of it and send it to the computer (Image file / Read clipboard).',
+    'Bu QR kod bir Google Authenticator aktarma kodu değil.': 'This QR code isn’t a Google Authenticator transfer code.',
+    '{0} hesap kayıtlı şifresine eklenecek': ['{0} account will be added to its saved password', '{0} accounts will be added to their saved passwords'],
+    '{0} yeni kayıt': ['{0} new entry', '{0} new entries'], '{0} zaten kayıtlı': '{0} already saved',
+    '{0} hesapta farklı bir 2FA anahtarı kayıtlı': ['{0} account has a different 2FA key saved', '{0} accounts have a different 2FA key saved'],
+    '{0} hesap atlandı (sayaçlı ya da desteklenmeyen kod)': ['{0} account skipped (counter-based or unsupported code)', '{0} accounts skipped (counter-based or unsupported codes)'],
+    '{0} hesap bulundu (QR {1}/{2})': ['{0} account found (QR {1}/{2})', '{0} accounts found (QR {1}/{2})'],
+    '{0} hesap bulundu': ['{0} account found', '{0} accounts found'],
+    'zaten kayıtlı': 'already saved', 'farklı anahtar: {0}': 'different key: {0}', '→ {0}': '→ {0}', 'yeni kayıt': 'new entry',
+    '✓ {0} hesabın 2FA kodu aktarıldı': ['✓ 2FA code imported for {0} account', '✓ 2FA codes imported for {0} accounts'],
+    '2FA kodların artık Bitig’de. Her şeyin geldiğini kontrol etmeden Google Authenticator’dan hesap silme.': 'Your 2FA codes are now in Bitig. Don’t delete accounts from Google Authenticator until you’ve checked everything arrived.',
     'Bu QR kod bir 2FA anahtarı değil.': 'This QR code isn’t a 2FA key.', '✓ 2FA anahtarı eklendi': '✓ 2FA key added',
     'QR koddan 2FA ekle': 'Add 2FA from a QR code',
     'Sitenin gösterdiği 2FA QR kodunu kamerayla tara ya da ekran görüntüsünden seç.': 'Scan the site’s 2FA QR code with the camera, or pick it from a screenshot.',
@@ -315,6 +335,17 @@
     '5 dakika içinde {0} girişi tamamlanmadı.': 'The {0} sign-in wasn’t completed within 5 minutes.',
     'OneDrive bağlantısı sona erdi; yeniden bağlanman gerekiyor.': 'The OneDrive connection has expired; you need to reconnect.',
     'OneDrive oturumu alınamadı: ': 'Couldn’t sign in to OneDrive: ',
+    // ---- Google Drive ve iCloud
+    'Google Drive bağlantısı sona erdi; yeniden bağlanman gerekiyor.': 'The Google Drive connection has expired; you need to reconnect.',
+    'Google Drive oturumu alınamadı: ': 'Couldn’t sign in to Google Drive: ',
+    'Google kalıcı oturum vermedi; bağlantıyı tekrar dene.': 'Google didn’t grant a lasting session; try connecting again.',
+    'Google Drive’a bağlı değil.': 'Not connected to Google Drive.', 'Google Drive klasörü okunamadı': 'Couldn’t read the Google Drive folder',
+    'Google Drive’da klasör oluşturulamadı': 'Couldn’t create the folder in Google Drive', 'Google Drive’dan okunamadı': 'Couldn’t read from Google Drive',
+    'Google Drive’a yazılamadı': 'Couldn’t write to Google Drive', 'Google Drive’dan silinemedi': 'Couldn’t delete from Google Drive',
+    'Bitig, {0} hesabında sadece kendi açtığı “{1}” klasörünü ve dosyalarını görür; diğer dosyalarına erişemez.': 'Bitig only sees the “{1}” folder and files it created in your {0}; it can’t access your other files.',
+    ' · {0} klasörü': ' · {0} folder', 'iCloud Drive klasörü': 'iCloud Drive folder', '✓ iCloud Drive klasörü seçildi': '✓ iCloud Drive folder selected',
+    'iCloud Drive’ı kullan': 'Use iCloud Drive', 'Bu bilgisayarda iCloud Drive klasörü bulunamadı.': 'No iCloud Drive folder found on this computer.',
+    'iPhone’daki Bitig iCloud’a bağlanamaz (Apple buna izin vermiyor). ': 'Bitig on iPhone can’t connect to iCloud (Apple doesn’t allow it). ',
     'OneDrive’a bağlı değil.': 'Not connected to OneDrive.',
     'OneDrive klasörü okunamadı': 'Couldn’t read the OneDrive folder',
     'OneDrive’dan okunamadı': 'Couldn’t read from OneDrive',
@@ -467,6 +498,8 @@
     '{0} için kayıtlı hesaplar': 'Saved accounts for {0}', 'Bu sayfada doldurulacak şifre alanı bulunamadı.': 'No password field to fill on this page.',
     'Bitig: {0} kayıtlı hesap': ['Bitig: {0} saved account', 'Bitig: {0} saved accounts'], 'Bitig kilitli. Masaüstündeki panelden kilidi aç.': 'Bitig is locked. Unlock it from the desktop panel.',
     'Doldur': 'Fill', 'Bağlanıyor…': 'Connecting…', '🔒 Bitig kilitli.': '🔒 Bitig is locked.', '↻ Tekrar dene': '↻ Try again',
+    'Bitig: 2FA kodunu doldur': 'Bitig: fill the 2FA code', 'Bitig · 2FA kodu': 'Bitig · 2FA code', '2FA kodu': '2FA code',
+    'Kopyalandı · {0} sn geçerli': 'Copied · valid for {0} s', 'Bu kayıtta 2FA anahtarı yok.': 'This entry has no 2FA key.',
   };
 
   const DICTS = { en: EN };
