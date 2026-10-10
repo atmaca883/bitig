@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bitig gizlilik</title>
+  <meta name="description" content="Bitig gizlilik politikası / Bitig privacy policy">
+  <link rel="icon" href="../icons/icon-192.png">
+  <meta name="theme-color" content="#15171c">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f6f3; --surface: #fff; --border: #e2e2dc; --text: #1d1f23; --muted: #6b6f78; --accent: #3b6fe0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { color-scheme: dark; --bg: #15171c; --surface: #1e2128; --border: #2f343e; --text: #e8e9ec; --muted: #9097a3; --accent: #6d97ff; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 40px max(16px, env(safe-area-inset-right)) 56px max(16px, env(safe-area-inset-left)); }
+    header { text-align: center; margin-bottom: 24px; }
+    header img { width: 72px; height: 72px; border-radius: 18px; }
+    h1 { font-size: 30px; margin: 12px 0 4px; }
+    .muted { color: var(--muted); }
+    .lang { text-align: center; margin: 0 0 24px; }
+    .lang a { color: var(--accent); margin: 0 8px; }
+    section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; margin: 16px 0; }
+    h2 { font-size: 21px; margin: 0 0 8px; }
+    h3 { font-size: 16px; margin: 18px 0 4px; }
+    p, li { margin: 6px 0; }
+    ul { padding-left: 22px; }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <img src="../icons/icon-192.png" alt="">
+      <h1>Bitig</h1>
+      <p class="muted">Gizlilik politikası · Privacy policy</p>
+      <p class="muted">Son güncelleme / Last updated: 2026-10-10</p>
+    </header>
+    <p class="lang"><a href="#tr">Türkçe</a> · <a href="#en">English</a></p>
+
+    <section id="tr" lang="tr">
+      <h2>Türkçe</h2>
+      <p>Bitig; şifrelerini, notlarını, görevlerini ve projelerini tek yerde tutan bir uygulamadır (Windows, Mac, telefon için web uygulaması ve tarayıcı eklentisi). Bitig'in bir sunucusu yoktur; geliştiricisi senin verilerini göremez, toplamaz ve saklamaz.</p>
+      <h3>Verilerin nerede durur</h3>
+      <ul>
+        <li>Tüm kayıtların, yalnızca senin bildiğin ana şifreyle cihazında şifrelenir (AES-256-GCM, scrypt). Şifrelenmemiş hâli hiçbir yere gönderilmez.</li>
+        <li>Eşitlemeyi açarsan bu şifreli dosya, senin seçtiğin kendi bulut hesabına (Dropbox, OneDrive, Google Drive) ya da kendi klasörüne yazılır. Bulut sağlayıcısı dosyanın içini göremez.</li>
+      </ul>
+      <h3>Google Drive</h3>
+      <ul>
+        <li>Google Drive'ı bağlarsan Bitig yalnızca <b>drive.file</b> iznini ister: sadece Bitig'in kendi oluşturduğu dosyalara (Drive'ındaki “Bitig” klasörü) erişebilir. Diğer dosyalarını göremez, okuyamaz, değiştiremez.</li>
+        <li>Bitig bu izinle yalnızca kendi şifreli eşitleme dosyalarını oluşturur, okur, günceller ve siler; böylece cihazların aynı verileri görür.</li>
+        <li>Hangi hesaba bağlı olduğunu göstermek için Google hesabının e-posta adresi ve adı okunur; yalnızca senin cihazında gösterilir.</li>
+        <li>Google'dan alınan oturum anahtarları yalnızca senin cihazında saklanır (bilgisayarda işletim sisteminin şifrelemesiyle). Hiçbir sunucuya, geliştiriciye ya da üçüncü kişiye gönderilmez; reklam, analiz ya da yapay zekâ eğitimi için kullanılmaz ve satılmaz.</li>
+        <li>Bitig'in Google kullanıcı verilerini kullanması ve aktarması, sınırlı kullanım şartları dahil <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Hizmetleri Kullanıcı Verileri Politikası</a>'na uyar.</li>
+        <li>Erişimi istediğin zaman kaldırabilirsin: Bitig'de Ayarlar → Bağlantıyı kes, ya da <a href="https://myaccount.google.com/permissions">Google hesabı → Üçüncü taraf erişimi</a>. Drive'daki “Bitig” klasörünü silebilirsin.</li>
+      </ul>
+      <h3>İnternet bağlantıları</h3>
+      <ul>
+        <li>Seçtiğin bulut sağlayıcısı (eşitleme için).</li>
+        <li>Güncelleme kontrolü: GitHub'daki yayın sayfası (bilgisayar sürümü).</li>
+        <li>Sızıntı kontrolü (yalnızca sen başlatırsan): Have I Been Pwned'e şifrenin özetinin yalnızca ilk 5 karakteri gönderilir; şifrenin kendisi gönderilmez.</li>
+      </ul>
+      <p>Bitig çerez, reklam ya da izleme kodu kullanmaz.</p>
+      <h3>İletişim</h3>
+      <p>Soruların için: <a href="https://github.com/atmaca883/bitig/issues">github.com/atmaca883/bitig/issues</a></p>
+    </section>
+
+    <section id="en" lang="en">
+      <h2>English</h2>
+      <p>Bitig is an app that keeps your passwords, notes, tasks and projects in one place (Windows, Mac, a web app for phones, and a browser extension). Bitig has no server; its developer cannot see, collect or store your data.</p>
+      <h3>Where your data lives</h3>
+      <ul>
+        <li>All your entries are encrypted on your device with a master password only you know (AES-256-GCM, scrypt). The unencrypted data is never sent anywhere.</li>
+        <li>If you turn on sync, this encrypted file is written to your own cloud account of your choice (Dropbox, OneDrive, Google Drive) or to your own folder. The cloud provider cannot see inside it.</li>
+      </ul>
+      <h3>Google Drive</h3>
+      <ul>
+        <li>If you connect Google Drive, Bitig requests only the <b>drive.file</b> scope: it can access only the files Bitig itself creates (the “Bitig” folder in your Drive). It cannot see, read or change any of your other files.</li>
+        <li>With this permission Bitig only creates, reads, updates and deletes its own encrypted sync files, so that your devices see the same data.</li>
+        <li>To show which account is connected, your Google account's email address and name are read; they are displayed only on your device.</li>
+        <li>The sign-in tokens received from Google are stored only on your device (on computers, encrypted by the operating system). They are never sent to any server, the developer or third parties; they are not used for advertising, analytics or AI training, and they are never sold.</li>
+        <li>Bitig's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</li>
+        <li>You can revoke access at any time: in Bitig, Settings → Disconnect, or at <a href="https://myaccount.google.com/permissions">Google Account → Third-party access</a>. You can delete the “Bitig” folder from your Drive.</li>
+      </ul>
+      <h3>Network connections</h3>
+      <ul>
+        <li>The cloud provider you choose (for sync).</li>
+        <li>Update check: the release page on GitHub (desktop version).</li>
+        <li>Breach check (only when you start it): only the first 5 characters of your password's hash are sent to Have I Been Pwned; the password itself is never sent.</li>
+      </ul>
+      <p>Bitig uses no cookies, ads or tracking code.</p>
+      <h3>Contact</h3>
+      <p>Questions: <a href="https://github.com/atmaca883/bitig/issues">github.com/atmaca883/bitig/issues</a></p>
+    </section>
+  </div>
+</body>
+</html>
