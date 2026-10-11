@@ -94,6 +94,12 @@ function render() {
   const c = $('#content');
   c.replaceChildren();
   if (query) renderSearch(c); else if (selectedDay) renderDay(c); else VIEWS[view](c);
+  // Etiket süzgeci açıkken üstte görünür, tek dokunuşla kaldırılır
+  if (tagFilter && !query) {
+    const shown = allTags().find((x) => tagKey(x.tag) === tagKey(tagFilter))?.tag || tagFilter;
+    c.prepend(h('div', { class: 'tag-bar' }, h('span', null, _t('🏷 #{0} etiketli kayıtlar', shown)),
+      h('button', { class: 'mini', type: 'button', onclick: () => { tagFilter = ''; render(); } }, _t('✕ Süzgeci kaldır'))));
+  }
   tickTotp();
   $('#fab').hidden = !!query || (!selectedDay && (view === 'health' || view === 'trash' || (view === 'projects' && !!openProjectId)));
   renderCalendar();
@@ -113,7 +119,11 @@ $('#tabs').addEventListener('click', (e) => {
 
 $('#search').addEventListener('input', (e) => { query = e.target.value.trim(); render(); });
 
-$('#projectFilter').addEventListener('change', (e) => { projectFilter = e.target.value; render(); });
+$('#projectFilter').addEventListener('change', (e) => {
+  const v = e.target.value;
+  if (v.startsWith('tag:')) { tagFilter = v.slice(4); projectFilter = 'all'; } else { tagFilter = ''; projectFilter = v; }
+  render();
+});
 
 $('#fab').addEventListener('click', () => {
   if (selectedDay) { openEditor('task', null, { due: selectedDay }); return; }

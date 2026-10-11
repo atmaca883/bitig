@@ -518,6 +518,9 @@ function syncSection(sy, row, toggle, reopen) {
     sy.enabled && h('div', { class: 'device-list' }, ...sy.devices.map(deviceRow)),
     h('p', { class: 'muted small' }, !sy.enabled
       ? _t('Açınca kasan şifreli olarak buluta da yazılır; telefonun ve diğer bilgisayarların değişiklikleri buradan birleşir.')
+      : cloud && provider === 'google'
+        // Telefon sürümü Google Drive'a henüz bağlanamıyor (web istemci sırrı herkese açık sitede saklanamaz)
+        ? (others.length ? '' : _t('Henüz başka cihaz yok. ')) + _t('Google Drive bilgisayarlar arasında eşitler; telefondaki Bitig henüz Google Drive’a bağlanamıyor. Telefonla eşitlemek için Dropbox ya da OneDrive seç.')
       : cloud
         ? (others.length ? '' : _t('Henüz başka cihaz yok. ')) + _t('Telefonda Bitig’i kurarken {0} seçeneğini seç. Her cihaz kendi şifreli dosyasını yazar; {0} içeriği göremez.', cloud.label)
         : (inICloud ? _t('iPhone’daki Bitig iCloud’a bağlanamaz (Apple buna izin vermiyor). ') : '')

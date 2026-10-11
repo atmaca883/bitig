@@ -4,7 +4,23 @@
 // ---------- satırlar ----------
 const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
 // Fareyle satırın üstüne gelince görünen sil düğmesi (kayıt çöp kutusuna gider, "Geri al" ile döner)
+// Yıldız: yıldızlıysa hep görünür, değilse fareyle üstüne gelince (telefonda soluk)
+const starBtn = (item) => h('button', {
+  class: 'mini star-btn' + (item.starred ? ' on' : ''), title: item.starred ? _t('Yıldızı kaldır') : _t('Yıldızla (üstte tut)'),
+  onclick: stop(() => { toggleStar(item); persist(); render(); }),
+}, item.starred ? '★' : '☆');
 const delBtn = (type, item) => h('button', { class: 'mini del-btn', title: _t('Çöp kutusuna taşı'), onclick: stop(() => moveToTrash(type, item)) }, '🗑');
+
+// Etiket çipleri: tıklayınca o etiketle süzülür (seçiliyse süzgeç kalkar)
+const attachChip = (x) => (x.files?.length ? h('span', { class: 'chip', title: x.files.map((f) => f.name).join('\n') }, '📎 ' + x.files.length) : null);
+
+function tagChips(item) {
+  return (item.tags || []).map((t) => h('span', {
+    class: 'chip tag' + (tagFilter && tagKey(t) === tagKey(tagFilter) ? ' on' : ''),
+    title: _t('Bu etiketle süz'),
+    onclick: stop(() => { tagFilter = tagKey(t) === tagKey(tagFilter) ? '' : t; render(); $('#content').scrollTop = 0; }),
+  }, '#' + t));
+}
 
 function taskRow(t, { hideProject = false } = {}) {
   return h('div', { class: 'item t-task' + (t.done ? ' done' : ''), onclick: () => openEditor('task', t) },
@@ -27,9 +43,10 @@ function taskRow(t, { hideProject = false } = {}) {
         !t.done && dueChip(t.due),
         !t.done && t.remindAt && h('span', { class: 'chip' }, '⏰ ' + fmtDateTime(t.remindAt)),
         t.repeat && h('span', { class: 'chip', title: _t('Tekrarlayan görev') }, '🔁 ' + (REPEAT_LABELS()[t.repeat] || '')),
+        attachChip(t), ...tagChips(t),
         t.done ? stampChip(t, t.completedAt || t.updated, '✓ ') : stampChip(t),
         !hideProject && projectChip(t.projectId))),
-    h('div', { class: 'side' }, delBtn('task', t)),
+    h('div', { class: 'side' }, starBtn(t), delBtn('task', t)),
   );
 }
 
@@ -51,7 +68,7 @@ function passwordRow(p, { hideProject = false } = {}) {
     h('div', { class: 'body' },
       h('div', { class: 'title' }, p.title),
       h('div', { class: 'sub' }, p.username || p.url || '—'),
-      h('div', { class: 'chips' }, totpChip(p), ...healthChips(p), stampChip(p), !hideProject && projectChip(p.projectId))),
+      h('div', { class: 'chips' }, totpChip(p), ...healthChips(p), attachChip(p), ...tagChips(p), stampChip(p), !hideProject && projectChip(p.projectId))),
     h('div', { class: 'side' },
       p.username && h('button', { class: 'mini', title: _t('Kullanıcı adını kopyala'),
         onclick: stop(() => { kasa.copy(p.username); toast(_t('Kullanıcı adı kopyalandı')); }) }, '@'),
@@ -59,7 +76,7 @@ function passwordRow(p, { hideProject = false } = {}) {
         onclick: stop(() => { kasa.copy(p.password, true); toast(_t('Şifre kopyalandı · 30 sn sonra panodan silinecek')); }) }, '🔑 Kopyala'),
       p.url && h('button', { class: 'mini', title: _t('Adresi aç'),
         onclick: stop(() => kasa.openUrl(p.url)) }, '↗'),
-      delBtn('password', p)),
+      starBtn(p), delBtn('password', p)),
   );
 }
 
@@ -73,9 +90,10 @@ function noteRow(n, { hideProject = false } = {}) {
       h('div', { class: 'sub' }, first),
       h('div', { class: 'chips' },
         pr.total && h('span', { class: 'chip' + (pr.done === pr.total ? ' ok' : '') }, `☑ ${pr.done}/${pr.total}`),
+        attachChip(n), ...tagChips(n),
         stampChip(n),
         !hideProject && projectChip(n.projectId))),
-    h('div', { class: 'side' }, delBtn('note', n)),
+    h('div', { class: 'side' }, starBtn(n), delBtn('note', n)),
   );
 }
 
@@ -97,7 +115,11 @@ function quickAdd(placeholder, due) {
   const input = h('input', { type: 'text', placeholder });
   input.addEventListener('keydown', async (e) => {
     if (e.key !== 'Enter' || !input.value.trim()) return;
-    const task = newItem('task', { title: input.value.trim(), due: due || '' });
+    // '#etiket' yazılan kelimeler göreve etiket olur (seçili etiket de eklenir)
+    const { text, tags } = splitHashtags(input.value);
+    if (!text) return;
+    const allTagsHere = normTags([...tags, ...(tagFilter ? [tagFilter] : [])]);
+    const task = newItem('task', { title: text, due: due || '', ...(allTagsHere.length ? { tags: allTagsHere } : {}) });
     if (findDuplicateTask(task) && !(await ask(_t('Bu görev zaten var'),
       _t("“{0}” açık görevler arasında zaten duruyor.", task.title),
       [{ label: _t('Vazgeç'), value: false }, { label: _t('Yine de ekle'), value: true, primary: true }]))) return;

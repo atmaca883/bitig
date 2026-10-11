@@ -78,6 +78,34 @@ function formDialog({ title, text, fields, submitLabel, onSubmit }) {
   });
 }
 
+// Acil durum kâğıdı: kurtarma anahtarı ve "ana şifreni unutursan" adımları; yazdırılıp saklanır.
+// Anahtar yalnızca oluşturulduğu an bilinir (kasada açık saklanmaz), bu yüzden kâğıt anahtar penceresinden basılır.
+function emergencyKitHtml(recoveryKey) {
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const day = new Date().toLocaleDateString(KasaI18n.locale(), { day: 'numeric', month: 'long', year: 'numeric' });
+  const steps = [
+    _t('Bitig’i aç. Kilit ekranında “Ana şifremi unuttum”a bas.'),
+    _t('Bu kâğıttaki kurtarma anahtarını yaz.'),
+    _t('Yeni bir ana şifre belirle. Kayıtların olduğu gibi açılır.'),
+  ];
+  return `<!doctype html><html lang="${esc(KasaI18n.lang?.() || 'tr')}"><head><meta charset="utf-8"><title>Bitig</title><style>
+    @page { margin: 18mm; }
+    body { font: 13pt/1.5 "Segoe UI", system-ui, sans-serif; color: #111; margin: 0; }
+    h1 { font-size: 24pt; margin: 0 0 2pt; } .muted { color: #555; font-size: 10.5pt; }
+    .key { font: 600 20pt/1.3 Consolas, "Courier New", monospace; letter-spacing: 1.5pt; border: 2px solid #111; border-radius: 8pt; padding: 12pt 14pt; margin: 14pt 0; text-align: center; }
+    ol { padding-left: 18pt; } li { margin: 4pt 0; }
+    .box { border: 1px dashed #999; border-radius: 8pt; padding: 10pt 12pt; margin-top: 16pt; font-size: 11pt; }
+  </style></head><body>
+    <h1>Bitig</h1>
+    <div class="muted">${esc(_t('Acil durum kâğıdı'))} · ${esc(day)}</div>
+    <p>${esc(_t('Ana şifreni unutursan kasanı bu kurtarma anahtarıyla açabilirsin:'))}</p>
+    <div class="key">${esc(recoveryKey)}</div>
+    <ol>${steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+    <div class="box">⚠ ${esc(_t('Bu kâğıdı güvenli bir yerde sakla (ör. kilitli çekmece). Anahtarı bilen biri, ana şifre olmadan da kasanı açabilir. Yeni bir kurtarma anahtarı oluşturursan bu kâğıt geçersiz olur.'))}</div>
+    <p class="muted">${esc(_t('Bitig’i indir:'))} atmaca883.github.io/bitig/indir</p>
+  </body></html>`;
+}
+
 function showRecoveryKey(recoveryKey, { first = false } = {}) {
   closeDialog(null);
   return new Promise((resolve) => {
@@ -90,7 +118,9 @@ function showRecoveryKey(recoveryKey, { first = false } = {}) {
       h('p', null, (first ? _t('Kasan hazır. ') : '') +
         _t('Ana şifreni unutursan kasayı sadece bu anahtarla açabilirsin. Kâğıda yaz ve güvenli bir yerde sakla; bu bilgisayarda bir dosyaya kaydetme.')),
       h('div', { class: 'recovery-key' }, recoveryKey),
-      h('button', { class: 'ghost small', type: 'button', onclick: () => { kasa.copy(recoveryKey, true); toast(_t('Kopyalandı · 30 sn sonra panodan silinecek')); } }, '⧉ Kopyala'),
+      h('div', { class: 'row-actions' },
+        h('button', { class: 'ghost small', type: 'button', onclick: () => { kasa.copy(recoveryKey, true); toast(_t('Kopyalandı · 30 sn sonra panodan silinecek')); } }, '⧉ Kopyala'),
+        h('button', { class: 'ghost small', type: 'button', onclick: () => kasa.printHtml(emergencyKitHtml(recoveryKey)).catch((e) => toast(cleanErr(e))) }, _t('🖨 Acil durum kâğıdını yazdır'))),
       h('label', { class: 'check-line' }, cb, _t('Bu anahtarı güvenli bir yere yazdım')),
       h('div', { class: 'dialog-actions' }, ok)));
     $('#dialog').hidden = false;

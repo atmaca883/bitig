@@ -9,6 +9,7 @@ const FORMS = {
       { k: 'due', label: _t('Son tarih'), type: 'date' },
       { k: 'repeat', label: _t('Tekrar'), type: 'repeat' },
       { k: 'remindAt', label: _t('Hatırlat'), type: 'datetime-local' },
+      { k: 'tags', label: _t('Etiketler'), type: 'tags' },
       { k: 'projectId', label: _t('Proje'), type: 'project' },
       { k: 'note', label: _t('Not'), type: 'textarea' },
     ],
@@ -21,6 +22,7 @@ const FORMS = {
       { k: 'password', label: _t('Şifre'), type: 'secret' },
       { k: 'totp', label: _t('2FA anahtarı (isteğe bağlı)'), type: 'totp' },
       { k: 'url', label: _t('Adres'), type: 'text', ph: 'https://' },
+      { k: 'tags', label: _t('Etiketler'), type: 'tags' },
       { k: 'projectId', label: _t('Proje'), type: 'project' },
       { k: 'note', label: _t('Not'), type: 'textarea' },
     ],
@@ -30,6 +32,7 @@ const FORMS = {
     fields: [
       { k: 'title', label: _t('Başlık'), type: 'text', ph: _t('Başlık') },
       { k: 'body', label: _t('İçerik'), type: 'textarea', grow: true },
+      { k: 'tags', label: _t('Etiketler'), type: 'tags' },
       { k: 'projectId', label: _t('Proje'), type: 'project' },
     ],
   },
@@ -100,6 +103,33 @@ function buildField(f, value) {
       h('button', { type: 'button', class: 'mini', title: _t('Kopyala'),
         onclick: () => { if (input.value) { kasa.copy(input.value, true); toast(_t('Şifre kopyalandı · 30 sn sonra silinecek')); } } }, '⧉')),
       strengthMeter(input));
+  } else if (f.type === 'tags') {
+    // Etiket çipleri + yazma kutusu (Enter ya da virgülle ekle, boşken ⌫ ile son etiketi sil); var olan etiketler önerilir
+    let tags = normTags(value);
+    const wrap = h('div', { class: 'tag-input', 'data-k': f.k });
+    const add = h('input', { type: 'text', class: 'tag-new', placeholder: _t('Etiket ekle (Enter)'), list: 'tag-suggest', autocomplete: 'off', spellcheck: 'false' });
+    const suggest = h('datalist', { id: 'tag-suggest' }, ...allTags().map((x) => h('option', { value: x.tag })));
+    const draw = () => {
+      wrap.dataset.value = JSON.stringify(tags);
+      wrap.replaceChildren(...tags.map((t) => h('span', { class: 'chip tag' }, '#' + t,
+        h('button', { type: 'button', class: 'tag-x', title: _t('Kaldır'), onclick: () => { tags = tags.filter((x) => x !== t); draw(); add.focus(); } }, '×'))),
+      add, suggest);
+    };
+    const commit = () => {
+      if (!add.value.trim()) return false;
+      tags = normTags([...tags, ...add.value.split(',')]);
+      add.value = '';
+      draw();
+      return true;
+    };
+    add.addEventListener('keydown', (e) => {
+      if ((e.key === 'Enter' || e.key === ',') && commit()) { e.preventDefault(); add.focus(); } else if (e.key === ',') e.preventDefault();
+      else if (e.key === 'Backspace' && !add.value && tags.length) { tags = tags.slice(0, -1); draw(); add.focus(); }
+    });
+    add.addEventListener('change', () => { if (add.value.includes(',')) commit(); }); // öneri listesinden seçilince
+    add.addEventListener('blur', commit); // yazılıp bırakılan etiket kaybolmasın
+    draw();
+    label.append(wrap);
   } else if (f.type === 'repeat') {
     input = h('select', { 'data-k': f.k },
       h('option', { value: '' }, _t('Tekrarlanmaz')),
@@ -138,7 +168,7 @@ function buildField(f, value) {
 function openEditor(type, item = null, extra = {}) {
   const def = FORMS[type];
   const isNew = !item;
-  const draft = item || newItem(type, extra);
+  const draft = item || newItem(type, { ...(tagFilter && type !== 'project' ? { tags: [tagFilter] } : {}), ...extra });
   editing = { type, item: draft, isNew };
 
   $('#sheetTitle').textContent = def.titles[isNew ? 0 : 1];
@@ -147,9 +177,129 @@ function openEditor(type, item = null, extra = {}) {
   const form = $('#sheetForm');
   form.replaceChildren(...def.fields.map((f) => buildField(f, draft[f.k])));
   if (type === 'note') attachChecklist(form);
+  if (type === 'password' && !isNew) form.querySelector('[data-k="password"]')?.closest('label').after(passwordHistory(draft) || '');
+  addExtrasRow(form, draft);
   if (!isNew) form.append(stampDetails(type, draft));
   $('#sheet').hidden = false;
   form.querySelector('input, textarea')?.focus();
+}
+
+// Az kullanılan alanlar (etiketler) boşken gizli durur; düzenleyicinin altında küçük bir bağlantıyla açılır.
+// Düzenleyici sade kalsın: her kayıtta görünen boş alan olmasın.
+function addExtrasRow(form, draft) {
+  const tagsLabel = form.querySelector('.tag-input')?.closest('label');
+  if (!tagsLabel) return; // proje düzenleyicisinde ek alan yok
+  const row = h('div', { class: 'extras' });
+  if (!draft.tags?.length) {
+    tagsLabel.hidden = true;
+    row.append(h('button', { type: 'button', class: 'link-btn', onclick: (e) => {
+      tagsLabel.hidden = false;
+      e.currentTarget.remove();
+      tagsLabel.querySelector('.tag-new')?.focus();
+    } }, _t('# Etiket ekle')));
+  }
+  const list = h('div', { class: 'attach-list' });
+  row.append(h('button', { type: 'button', class: 'link-btn', onclick: () => pickAttachments(draft, list) }, _t('📎 Dosya ekle')));
+  tagsLabel.after(list, row);
+  drawAttachments(draft, list);
+}
+
+// ---------- dosya ekleri ----------
+// Kayıtlı bir kayıtta ek ekleme/kaldırma hemen kaydedilir (Kaydet'e basmayı unutunca kaybolmasın)
+function saveAttachChange(draft) {
+  if (!editing || editing.isNew || editing.item !== draft) return;
+  draft.updated = Date.now();
+  persist();
+}
+
+function pickAttachments(draft, list) {
+  const inp = h('input', { type: 'file', multiple: true });
+  inp.addEventListener('change', async () => {
+    for (const f of inp.files || []) {
+      if (f.size > KasaAttach.MAX_BYTES) { toast(_t('“{0}” çok büyük (en fazla {1}).', f.name, KasaAttach.prettySize(KasaAttach.MAX_BYTES))); continue; }
+      try {
+        const meta = await kasa.files.add(f.name, f.type, new Uint8Array(await f.arrayBuffer()));
+        draft.files = [...(draft.files || []), meta];
+        saveAttachChange(draft);
+        drawAttachments(draft, list);
+      } catch (e) { toast(cleanErr(e)); }
+    }
+  });
+  inp.click();
+}
+
+function drawAttachments(draft, list) {
+  const files = draft.files || [];
+  list.replaceChildren(...files.map((f) => h('div', { class: 'attach-row' },
+    h('button', { type: 'button', class: 'attach-open', title: _t('Aç'), onclick: () => openAttachment(f) },
+      h('span', { class: 'attach-ico' }, KasaAttach.icon(f)),
+      h('span', { class: 'attach-name' }, f.name),
+      h('small', null, KasaAttach.prettySize(f.size))),
+    h('button', { type: 'button', class: 'tag-x', title: _t('Kaldır'), onclick: () => {
+      draft.files = files.filter((x) => x !== f);
+      if (!draft.files.length) delete draft.files;
+      saveAttachChange(draft);
+      drawAttachments(draft, list);
+      toast(_t('“{0}” kaldırıldı', f.name), { label: _t('Geri al'), fn: () => {
+        draft.files = [...(draft.files || []), f];
+        saveAttachChange(draft);
+        if (list.isConnected) drawAttachments(draft, list); else render();
+      } });
+    } }, '×'))));
+}
+
+// Resimler pencerede görünür; diğer dosyalar kaydedilir (telefonda indirilir)
+async function openAttachment(f) {
+  try {
+    if (KasaAttach.isImage(f)) {
+      const bytes = new Uint8Array(await kasa.files.read(f.id));
+      let bin = '';
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const shown = ask(f.name, '', [{ label: _t('Kaydet'), value: 'save' }, { label: _t('Kapat'), value: null, primary: true }]);
+      $('#dialog .dialog-card h3')?.after(h('img', { class: 'attach-preview', alt: f.name, src: `data:${f.type};base64,${btoa(bin)}` }));
+      if ((await shown) !== 'save') return;
+    }
+    const saved = await kasa.files.save(f.id, f.name);
+    if (saved) toast(_t('Kaydedildi: {0}', saved));
+  } catch (e) {
+    toast(cleanErr(e));
+  }
+}
+
+// Şifre geçmişi: eski şifreler gizli durur; gösterilebilir, kopyalanabilir ya da yeniden şimdiki şifre yapılabilir
+function passwordHistory(item) {
+  const list = item.pwHistory || [];
+  if (!list.length) return null;
+  const MASK = '••••••••';
+  const box = h('details', { class: 'pw-history' },
+    h('summary', null, _t('🕘 Şifre geçmişi ({0})', list.length)),
+    ...list.map((x) => {
+      const val = h('code', { class: 'pw-old' }, MASK);
+      return h('div', { class: 'pw-old-row', title: (x.from ? fmtFull(x.from) : '?') + ' → ' + fmtFull(x.until) },
+        h('div', { class: 'body' }, val, h('small', null, _t('Değiştirildi: {0}', fmtStamp(x.until)))),
+        h('button', { type: 'button', class: 'mini', title: _t('Göster / gizle'),
+          onclick: () => { val.textContent = val.textContent === MASK ? x.password : MASK; } }, '👁'),
+        h('button', { type: 'button', class: 'mini', title: _t('Kopyala'),
+          onclick: () => { kasa.copy(x.password, true); toast(_t('Eski şifre kopyalandı · 30 sn sonra silinecek')); } }, '⧉'),
+        h('button', { type: 'button', class: 'mini', title: _t('Bu şifreye geri dön'),
+          onclick: () => {
+            const input = $('#sheetForm [data-k="password"]');
+            input.value = x.password;
+            input.type = 'text';
+            input.dispatchEvent(new Event('input'));
+            toast(_t('Eski şifre yazıldı; Kaydet’e basınca geri döner'));
+          } }, '↩'));
+    }),
+    h('button', { type: 'button', class: 'mini pw-history-clear', onclick: async () => {
+      if (!(await ask(_t('Şifre geçmişi silinsin mi?'), _t('Bu kayıttaki eski şifreler kalıcı olarak silinir.'),
+        [{ label: _t('Vazgeç'), value: false }, { label: _t('Sil'), value: true, primary: true }]))) return;
+      delete item.pwHistory;
+      item.updated = Date.now();
+      persist();
+      box.remove();
+      toast(_t('Şifre geçmişi silindi'));
+    } }, _t('Geçmişi temizle')));
+  return box;
 }
 
 // Notta yapılacak listesi: metindeki "- [ ] madde" satırları kutucuklu gösterilir. İşaretleme kayıtlı notta hemen kaydedilir
@@ -230,6 +380,7 @@ async function checkDuplicates(type, item, values, isNew) {
       for (const [k, v] of Object.entries(values)) {
         if (k === 'note') { if (v && !(dup.note || '').includes(v)) dup.note = [dup.note, v].filter(Boolean).join('\n'); }
         else if (k === 'password') { if (v) setPassword(dup, v); }
+        else if (k === 'tags') { if (v.length) dup.tags = normTags([...(dup.tags || []), ...v]); }
         else if (v) dup[k] = v;
       }
       dup.updated = Date.now();
@@ -276,7 +427,10 @@ async function saveEditor() {
   const form = $('#sheetForm');
   const values = {};
   for (const el of form.querySelectorAll('[data-k]')) {
-    values[el.dataset.k] = el.classList.contains('colors') ? el.dataset.value : el.value;
+    values[el.dataset.k] = el.classList.contains('colors') ? el.dataset.value
+      // yazılıp Enter'a basılmadan bırakılan etiket de alınır
+      : el.classList.contains('tag-input') ? normTags([...JSON.parse(el.dataset.value || '[]'), ...(el.querySelector('.tag-new')?.value || '').split(',')])
+      : el.value;
   }
   const missing = FORMS[type].fields.find((f) => f.req && !String(values[f.k] || '').trim());
   if (missing) {
@@ -303,7 +457,9 @@ async function saveEditor() {
 
   const now = Date.now();
   if (isNew) item.created = now; // form açıldığında değil, kaydedildiğinde oluşturulmuş sayılır
+  if (type === 'password' && !isNew && values.password !== item.password) rememberOldPassword(item, values.password);
   if (type === 'password' && values.password && values.password !== (isNew ? undefined : item.password)) item.pwChanged = now;
+  if (Array.isArray(values.tags) && !values.tags.length) { delete values.tags; delete item.tags; } // boş etiket listesi saklanmaz
   Object.assign(item, values, { updated: now });
   if (isNew) db[COLLECTION[type]].push(item);
   persist();

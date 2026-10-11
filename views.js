@@ -24,7 +24,7 @@ const VIEWS = {
   },
 
   passwords(c) {
-    const list = db.passwords.filter(inFilter).sort((a, b) => a.title.localeCompare(b.title, 'tr'));
+    const list = db.passwords.filter(inFilter).sort(starredFirst((a, b) => a.title.localeCompare(b.title, 'tr')));
     if (!list.length) return c.append(empty('🔑', _t('Henüz şifre yok. ＋ ile ekle.')),
       h('div', { class: 'footer-actions' }, h('button', { class: 'mini primary-mini', type: 'button', onclick: () => importFlow() }, _t('Başka yerden içe aktar'))));
     const s = pwHealth().sum;
@@ -37,14 +37,14 @@ const VIEWS = {
   },
 
   notes(c) {
-    const list = db.notes.filter(inFilter).sort((a, b) => (b.updated || 0) - (a.updated || 0));
+    const list = db.notes.filter(inFilter).sort(starredFirst((a, b) => (b.updated || 0) - (a.updated || 0)));
     if (!list.length) return c.append(empty('📝', _t('Henüz not yok. ＋ ile ekle.')));
     c.append(...list.map((x) => noteRow(x)));
   },
 
   tasks(c) {
     const all = db.tasks.filter(inFilter);
-    const open = all.filter((x) => !x.done).sort(byDue);
+    const open = all.filter((x) => !x.done).sort(starredFirst(byDue));
     const done = all.filter((x) => x.done).sort((a, b) => (b.updated || 0) - (a.updated || 0));
     c.append(quickAdd(_t('＋ Hızlı görev ekle… (Enter)')));
     c.append(section(_t('Açık'), open.length));
@@ -418,10 +418,12 @@ function removeExtras(coll, group) {
 
 function renderSearch(c) {
   const q = lower(query);
-  const has = (...vals) => vals.some((v) => lower(v).includes(q));
-  const tasks = db.tasks.filter((x) => has(x.title, x.note)).sort(byDue);
-  const pws = db.passwords.filter((x) => has(x.title, x.username, x.url, x.note));
-  const notes = db.notes.filter((x) => has(x.title, x.body));
+  const tagOnly = q.startsWith('#') && q.length > 1;
+  const has = (...vals) => (tagOnly ? false : vals.some((v) => lower(v).includes(q)));
+  const tagHit = (x) => (x.tags || []).some((t) => (tagOnly ? tagKey(t).startsWith(tagKey(q)) : tagKey(t).includes(q)));
+  const tasks = db.tasks.filter((x) => has(x.title, x.note) || tagHit(x)).sort(starredFirst(byDue));
+  const pws = db.passwords.filter((x) => has(x.title, x.username, x.url, x.note) || tagHit(x)).sort(starredFirst(() => 0));
+  const notes = db.notes.filter((x) => has(x.title, x.body) || tagHit(x)).sort(starredFirst(() => 0));
   const projects = db.projects.filter((x) => has(x.name));
   if (!tasks.length && !pws.length && !notes.length && !projects.length) {
     return c.append(empty('🔍', _t("“{0}” için sonuç yok.", query)));
@@ -441,11 +443,16 @@ function renderSearch(c) {
 function renderProjectFilter() {
   const sel = $('#projectFilter');
   if (projectFilter !== 'all' && projectFilter !== 'none' && !projectById(projectFilter)) projectFilter = 'all';
+  // Etiketler aynı kutuda ayrı bir grup: bir etiket seçmek proje süzgecini kaldırır (ve tersi)
+  const tags = allTags();
+  if (tagFilter && !tags.some((x) => tagKey(x.tag) === tagKey(tagFilter))) tagFilter = '';
   sel.replaceChildren(
     h('option', { value: 'all' }, _t('Tüm projeler')),
     ...db.projects.map((p) => h('option', { value: p.id }, p.name)),
     h('option', { value: 'none' }, _t('Projesiz')),
+    tags.length && h('optgroup', { label: _t('Etiketler') },
+      ...tags.map((x) => h('option', { value: 'tag:' + tagKey(x.tag) }, '#' + x.tag + ' (' + x.n + ')'))),
   );
-  sel.value = projectFilter;
-  sel.hidden = view === 'projects' && !query;
+  sel.value = tagFilter ? 'tag:' + tagKey(tagFilter) : projectFilter;
+  sel.hidden = view === 'projects' && !query && !tagFilter;
 }

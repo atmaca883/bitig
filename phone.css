@@ -36,6 +36,8 @@ body.phone .splitter { height: 14px; }
 /* dokunmatik ekranda üzerine gelme yok: gizli düğmeler hep görünsün */
 @media (hover: none) {
   .del-btn { opacity: .5; }
+  .star-btn { opacity: .45; }
+  .star-btn.on { opacity: 1; }
   .card-btn { opacity: .85; }
 }
 

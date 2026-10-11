@@ -335,6 +335,34 @@
     '5 dakika içinde {0} girişi tamamlanmadı.': 'The {0} sign-in wasn’t completed within 5 minutes.',
     'OneDrive bağlantısı sona erdi; yeniden bağlanman gerekiyor.': 'The OneDrive connection has expired; you need to reconnect.',
     'OneDrive oturumu alınamadı: ': 'Couldn’t sign in to OneDrive: ',
+    // ---- yıldız ve acil durum kâğıdı
+    'Yıldızı kaldır': 'Remove star', 'Yıldızla (üstte tut)': 'Star (keep on top)',
+    '🖨 Acil durum kâğıdını yazdır': '🖨 Print emergency sheet', 'Acil durum kâğıdı': 'Emergency sheet', 'Bitig’i indir:': 'Download Bitig:',
+    'Ana şifreni unutursan kasanı bu kurtarma anahtarıyla açabilirsin:': 'If you forget your master password, you can open your vault with this recovery key:',
+    'Bitig’i aç. Kilit ekranında “Ana şifremi unuttum”a bas.': 'Open Bitig. On the lock screen, press “I forgot my master password”.',
+    'Bu kâğıttaki kurtarma anahtarını yaz.': 'Type the recovery key from this sheet.',
+    'Yeni bir ana şifre belirle. Kayıtların olduğu gibi açılır.': 'Set a new master password. Your entries open as they were.',
+    'Bu kâğıdı güvenli bir yerde sakla (ör. kilitli çekmece). Anahtarı bilen biri, ana şifre olmadan da kasanı açabilir. Yeni bir kurtarma anahtarı oluşturursan bu kâğıt geçersiz olur.':
+      'Keep this sheet somewhere safe (e.g. a locked drawer). Anyone who knows the key can open your vault even without the master password. If you create a new recovery key, this sheet becomes invalid.',
+    // ---- dosya ekleri
+    '📎 Dosya ekle': '📎 Add file', 'Eki kaydet': 'Save attachment', 'Kaydedildi: {0}': 'Saved: {0}',
+    '“{0}” çok büyük (en fazla {1}).': '“{0}” is too large (max {1}).', '“{0}” kaldırıldı': '“{0}” removed',
+    'Dosya boş.': 'The file is empty.', 'Dosya çok büyük (en fazla {0}).': 'The file is too large (max {0}).',
+    'Ekler eşitlenemedi: ': 'Couldn’t sync attachments: ',
+    'Bu ek telefonda yok; bulut bağlantısı gerekiyor.': 'This attachment isn’t on the phone; a cloud connection is needed.',
+    'Ek henüz buluta ulaşmamış; ekleyen cihazın eşitlemesini bekle.': 'The attachment hasn’t reached the cloud yet; wait for the device that added it to sync.',
+    'Bu ek bu bilgisayarda yok. Eşitleme açılınca diğer cihazdan gelir.': 'This attachment isn’t on this computer. It will arrive from the other device once sync is on.',
+    // ---- etiketler
+    'Etiketler': 'Tags', 'Etiket ekle (Enter)': 'Add tag (Enter)', '# Etiket ekle': '# Add tag', 'Bu etiketle süz': 'Filter by this tag',
+    '🏷 #{0} etiketli kayıtlar': '🏷 Items tagged #{0}', '✕ Süzgeci kaldır': '✕ Clear filter',
+    // ---- şifre geçmişi
+    '🕘 Şifre geçmişi ({0})': '🕘 Password history ({0})', 'Değiştirildi: {0}': 'Changed: {0}',
+    'Eski şifre kopyalandı · 30 sn sonra silinecek': 'Old password copied · will be cleared in 30 s',
+    'Bu şifreye geri dön': 'Go back to this password', 'Eski şifre yazıldı; Kaydet’e basınca geri döner': 'Old password filled in; press Save to switch back',
+    'Şifre geçmişi silinsin mi?': 'Delete password history?', 'Bu kayıttaki eski şifreler kalıcı olarak silinir.': 'The old passwords in this entry will be permanently deleted.',
+    'Şifre geçmişi silindi': 'Password history deleted', 'Geçmişi temizle': 'Clear history',
+    'Google Drive bilgisayarlar arasında eşitler; telefondaki Bitig henüz Google Drive’a bağlanamıyor. Telefonla eşitlemek için Dropbox ya da OneDrive seç.':
+      'Google Drive syncs between computers; Bitig on the phone can’t connect to Google Drive yet. To sync with your phone, choose Dropbox or OneDrive.',
     // ---- Google Drive ve iCloud
     'Google Drive bağlantısı sona erdi; yeniden bağlanman gerekiyor.': 'The Google Drive connection has expired; you need to reconnect.',
     'Google Drive oturumu alınamadı: ': 'Couldn’t sign in to Google Drive: ',

@@ -71,8 +71,19 @@ function undoComplete(t, before) {
   t.updated = Date.now();
 }
 
+// Şifre geçmişi: değiştirilen eski şifreler kayıtta saklanır (en yenisi başta, en fazla PW_HISTORY_MAX).
+// { password, from: o şifrenin konduğu an, until: değiştirildiği an }. Kasa gibi şifrelidir ve eşitlenir.
+const PW_HISTORY_MAX = 10;
+function rememberOldPassword(p, next) {
+  if (!p.password || p.password === next) return;
+  const old = { password: p.password, from: p.pwChanged || p.created || 0, until: Date.now() };
+  // geri dönülen şifre (şimdiki olacak) ve aynı şifrenin eski kopyaları listede tekrar durmasın
+  const rest = (p.pwHistory || []).filter((x) => x.password !== next && x.password !== p.password);
+  p.pwHistory = [old, ...rest].slice(0, PW_HISTORY_MAX);
+}
+
 function setPassword(p, pw) {
-  if (p.password !== pw) p.pwChanged = Date.now();
+  if (p.password !== pw) { rememberOldPassword(p, pw); p.pwChanged = Date.now(); }
   p.password = pw;
   p.updated = Date.now();
 }
@@ -101,7 +112,41 @@ function projectChip(id) {
   return h('span', { class: 'chip' }, h('span', { class: 'dot', style: `background:${COLORS[p.color] || COLORS.gray}` }), p.name);
 }
 
+// ---------- etiketler ----------
+// Görev, şifre ve notlarda item.tags = ['iş', 'banka']. Büyük/küçük harf ve baştaki # fark etmez.
+let tagFilter = ''; // seçili etiket (boş: süzgeç yok)
+const tagKey = (t) => K.lower(String(t || '').trim().replace(/^#+/, ''));
+function normTags(list) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of list || []) {
+    const t = String(raw).trim().replace(/^#+/, '').replace(/\s+/g, ' ').slice(0, 30);
+    if (t && !seen.has(tagKey(t))) { seen.add(tagKey(t)); out.push(t); }
+  }
+  return out;
+}
+const hasTag = (item, tag) => (item.tags || []).some((t) => tagKey(t) === tagKey(tag));
+// Kullanılan etiketler, en çok kullanılan başta: [{ tag, n }]
+function allTags() {
+  const m = new Map();
+  for (const x of [...db.passwords, ...db.notes, ...db.tasks]) {
+    for (const t of x.tags || []) {
+      const k = tagKey(t);
+      if (!m.has(k)) m.set(k, { tag: t, n: 0 });
+      m.get(k).n++;
+    }
+  }
+  return [...m.values()].sort((a, b) => b.n - a.n || a.tag.localeCompare(b.tag, 'tr'));
+}
+// Yazılan metindeki #etiketleri ayır: "Faturayı öde #ev #acil" → { text: 'Faturayı öde', tags: ['ev', 'acil'] }
+function splitHashtags(s) {
+  const tags = [];
+  const text = String(s).replace(/(^|\s)#([\p{L}\p{N}_-]+)/gu, (_m, sp, t) => { tags.push(t); return sp; }).replace(/\s+/g, ' ').trim();
+  return { text, tags: normTags(tags) };
+}
+
 function inFilter(item) {
+  if (tagFilter && !hasTag(item, tagFilter)) return false;
   if (projectFilter === 'all') return true;
   if (projectFilter === 'none') return !item.projectId;
   return item.projectId === projectFilter;
@@ -136,6 +181,13 @@ function updateBadge() {
   const b = $('#tabBadge');
   b.textContent = n;
   b.hidden = n === 0;
+}
+
+// Yıldızlı kayıtlar listede hep üstte
+const starredFirst = (cmp) => (a, b) => (!!b.starred - !!a.starred) || cmp(a, b);
+function toggleStar(item) {
+  if (item.starred) delete item.starred; else item.starred = true;
+  item.updated = Date.now();
 }
 
 const byDue = (a, b) => (a.due || '9999').localeCompare(b.due || '9999') || a.title.localeCompare(b.title, 'tr');

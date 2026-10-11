@@ -30,6 +30,7 @@
     set: (k, v) => tx('readwrite', (s) => s.put(v, k)),
     del: (k) => tx('readwrite', (s) => s.delete(k)),
     clear: () => tx('readwrite', (s) => s.clear()),
+    keys: () => tx('readonly', (s) => s.getAllKeys()),
   };
 
   // Tarayıcının bu siteye ait verileri kendiliğinden silmemesini iste

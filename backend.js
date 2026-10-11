@@ -7,6 +7,7 @@
   const C = root.KasaCrypto;
   const Store = root.KasaStore;
   const Sync = root.KasaSync;
+  const A = root.KasaAttach;
   const PIN_MAX_TRIES = 5;
   const FILE_RE = /^kasa-([0-9a-zA-Z-]{8,})\.sync\.enc$/;
 
@@ -143,7 +144,8 @@
       if (!S.dek || !drive()?.isConnected()) return;
       if (!navigator.onLine) { S.lastError = _t('İnternet yok · değişiklikler bağlantı gelince gönderilecek'); return; }
       try {
-        const wrapsChanged = await readRemotes(await drive().list());
+        const files = await drive().list();
+        const wrapsChanged = await readRemotes(files);
         const merged = mergeRemotes(S.data);
         S.lastSync = Date.now();
         S.lastError = '';
@@ -158,6 +160,7 @@
           await persistLocal();
         }
         if (S.dirty) await uploadOwn();
+        try { await syncBlobs(files, S.data); } catch (e) { if (e?.authLost) throw e; S.lastError = _t('Ekler eşitlenemedi: ') + e.message; }
       } catch (e) {
         if (e?.authLost) S.needsReconnect = true;
         S.lastError = e.message;
@@ -182,6 +185,32 @@
     else if (S.dirty) uploadOwn(); // arka plana geçerken bekleyen değişikliği hemen gönder
   });
   addEventListener('online', () => { if (S.dek) syncNow(); });
+
+  // ---------- dosya ekleri ----------
+  // Telefonda IndexedDB'de "ek:<kimlik>" anahtarıyla, kasanın veri anahtarıyla şifreli durur: { t: metin, at }.
+  // Telefon ekleri yalnızca açıldığında indirir (veri kotası); eklediklerini buluta yükler.
+  const blobKey = (id) => 'ek:' + id;
+  async function uploadBlob(id) {
+    const rec = await Store.get(blobKey(id));
+    if (!rec || !drive()?.isConnected()) return false;
+    await drive().write(A.fileName(id), rec.t);
+    return true;
+  }
+  async function syncBlobs(files, data) {
+    const refs = A.referenced(data);
+    const remote = new Map();
+    for (const f of files) { const id = A.idOf(f.name); if (id) remote.set(id, f.modified || 0); }
+    const local = new Map();
+    for (const k of await Store.keys()) {
+      if (typeof k === 'string' && k.startsWith('ek:')) local.set(k.slice(3), (await Store.get(k))?.at || 0);
+    }
+    for (const id of refs) if (local.has(id) && !remote.has(id)) await uploadBlob(id);
+    const now = Date.now();
+    for (const [id, modified] of remote) {
+      if (!refs.has(id) && modified && now - modified > A.REMOTE_GRACE_MS) { try { await drive().remove(A.fileName(id)); } catch {} }
+    }
+    for (const [id, at] of local) if (!refs.has(id) && now - at > A.LOCAL_GRACE_MS) await Store.del(blobKey(id));
+  }
 
   // ---------- kurulum: buluttaki kasaya katıl ----------
   async function listVaultFiles() {
@@ -406,6 +435,59 @@
       return p;
     },
     deleteImportFile: async () => false,
+    // Yazdır: görünmez bir çerçevede tarayıcının yazdırma penceresi (iPhone'da paylaş → yazdır / PDF)
+    async printHtml(html) {
+      const f = document.createElement('iframe');
+      f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
+      f.srcdoc = String(html);
+      const loaded = new Promise((r) => { f.onload = r; });
+      document.body.append(f);
+      await loaded;
+      f.contentWindow.focus();
+      f.contentWindow.print();
+      setTimeout(() => f.remove(), 60_000);
+      return true;
+    },
+    files: {
+      async add(name, type, bytes) {
+        if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
+        const buf = new Uint8Array(bytes || []);
+        if (!buf.length) throw new Error(_t('Dosya boş.'));
+        if (buf.length > A.MAX_BYTES) throw new Error(_t('Dosya çok büyük (en fazla {0}).', A.prettySize(A.MAX_BYTES)));
+        const id = crypto.randomUUID();
+        await Store.set(blobKey(id), { t: JSON.stringify({ v: 1, box: await C.seal(S.dek, buf) }), at: Date.now() });
+        uploadBlob(id).catch(() => {});
+        return { id, name: A.cleanName(name), type: String(type || 'application/octet-stream').slice(0, 100), size: buf.length, added: Date.now() };
+      },
+      async read(id) {
+        if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
+        if (!A.validId(id)) throw new Error('?');
+        let rec = await Store.get(blobKey(id));
+        if (!rec) {
+          if (!drive()?.isConnected()) throw new Error(_t('Bu ek telefonda yok; bulut bağlantısı gerekiyor.'));
+          let t;
+          try { t = await drive().read({ name: A.fileName(id) }); } catch (e) {
+            if (e?.authLost) throw e;
+            throw new Error(_t('Ek henüz buluta ulaşmamış; ekleyen cihazın eşitlemesini bekle.'));
+          }
+          rec = { t, at: Date.now() };
+          await Store.set(blobKey(id), rec);
+        }
+        return C.open(S.dek, JSON.parse(rec.t).box);
+      },
+      async save(id, name) {
+        const bytes = await root.kasa.files.read(id);
+        const url = URL.createObjectURL(new Blob([bytes]));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = A.cleanName(name);
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        return A.cleanName(name);
+      },
+    },
     async hibpRange(prefix) {
       if (!/^[0-9A-F]{5}$/.test(String(prefix))) throw new Error('önek');
       const r = await fetch('https://api.pwnedpasswords.com/range/' + prefix, { headers: { 'Add-Padding': 'true' }, cache: 'no-store' });
