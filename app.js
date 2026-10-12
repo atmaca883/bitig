@@ -60,6 +60,7 @@ kasa.onMerged(({ data, changes, from }) => {
   const edit = editing && !editing.isNew ? { type: editing.type, id: editing.item.id } : null;
   db = next;
   for (const k of ['projects', 'passwords', 'notes', 'tasks', 'trash']) db[k] ||= [];
+  attachShared();
   if (edit) {
     const fresh = db[COLLECTION[edit.type]].find((x) => x.id === edit.id);
     if (fresh) editing.item = fresh; // açık düzenleme yeni nesneye bağlansın

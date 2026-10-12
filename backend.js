@@ -435,6 +435,49 @@
       return p;
     },
     deleteImportFile: async () => false,
+    // Paylaşım (beta): sunucu adresi config.js'te (shareServer); yoksa paylaşım görünmez
+    shareAvailable: async () => !!(root.KASA_CONFIG || {}).shareServer,
+    // Canlı bağlantı (bilgisayardaki ana süreç karşılığı)
+    shareLive(req) {
+      const base = String((root.KASA_CONFIG || {}).shareServer || '').replace(/\/+$/, '');
+      const token = typeof req?.token === 'string' ? req.token : '';
+      const want = new Set(token && base ? (req.spaces || []) : []);
+      S.live ||= new Map();
+      for (const [sid, c] of S.live) if (!want.has(sid) || c.token !== token) { c.stop = true; clearTimeout(c.timer); clearInterval(c.ping); try { c.ws?.close(1000); } catch {} S.live.delete(sid); }
+      for (const sid of want) {
+        if (S.live.has(sid)) continue;
+        const c = { token, retry: 0, stop: false };
+        S.live.set(sid, c);
+        const retry = () => { if (c.stop) return; c.retry = Math.min(c.retry + 1, 6); c.timer = setTimeout(connect, 1000 * 2 ** c.retry); };
+        const connect = () => {
+          if (c.stop) return;
+          let ws;
+          try { ws = new WebSocket(base.replace(/^http/, 'ws') + '/spaces/' + sid + '/live', ['bitig', token]); } catch { retry(); return; }
+          c.ws = ws;
+          ws.onopen = () => { c.retry = 0; c.ping = setInterval(() => { try { ws.send('ping'); } catch {} }, 25_000); emit('shareChanged', { spaceId: sid, reason: 'open' }); };
+          ws.onmessage = (e) => { if (String(e.data).startsWith('{')) emit('shareChanged', { spaceId: sid }); };
+          ws.onclose = (e) => { clearInterval(c.ping); if (e.code === 4003) { S.live.delete(sid); emit('shareChanged', { spaceId: sid, reason: 'removed' }); return; } retry(); };
+        };
+        connect();
+      }
+      return S.live.size;
+    },
+    async shareFetch(req) {
+      const base = String((root.KASA_CONFIG || {}).shareServer || '').replace(/\/+$/, '');
+      if (!base) throw new Error(_t('Paylaşım sunucusu tanımlı değil.'));
+      let r;
+      try {
+        r = await fetch(base + req.path, {
+          method: req.method || 'GET', cache: 'no-store',
+          headers: { 'Content-Type': typeof req.text === 'string' ? 'application/octet-stream' : 'application/json', ...(req.token ? { Authorization: 'Bearer ' + req.token } : {}) },
+          body: typeof req.text === 'string' ? req.text : req.body === undefined ? undefined : JSON.stringify(req.body),
+        });
+      } catch { throw new Error(_t('Paylaşım sunucusuna ulaşılamadı.')); }
+      if (req.raw && r.ok) return { status: r.status, text: await r.text() };
+      let body = {};
+      try { body = await r.json(); } catch {}
+      return { status: r.status, body };
+    },
     // Yazdır: görünmez bir çerçevede tarayıcının yazdırma penceresi (iPhone'da paylaş → yazdır / PDF)
     async printHtml(html) {
       const f = document.createElement('iframe');
@@ -474,6 +517,16 @@
           await Store.set(blobKey(id), rec);
         }
         return C.open(S.dek, JSON.parse(rec.t).box);
+      },
+      has: async (id) => A.validId(id) && !!(await Store.get(blobKey(id))),
+      // Ortak alandan inen ek: aynı kimlikle, bu kasanın anahtarıyla sakla
+      async put(id, bytes) {
+        if (!S.dek || S.pinLocked) throw new Error(_t('Bitig kilitli.'));
+        if (!A.validId(id)) throw new Error('?');
+        const buf = new Uint8Array(bytes || []);
+        await Store.set(blobKey(id), { t: JSON.stringify({ v: 1, box: await C.seal(S.dek, buf) }), at: Date.now() });
+        uploadBlob(id).catch(() => {});
+        return true;
       },
       async save(id, name) {
         const bytes = await root.kasa.files.read(id);
@@ -650,6 +703,7 @@
     },
 
     onMerged: on('merged'),
+    onShareChanged: on('shareChanged'),
     onCapture: on('capture'),
     onCapturePending: on('capturePending'),
     onPaired: on('paired'),

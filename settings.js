@@ -10,6 +10,8 @@ async function openSettingsSheet() {
     kasa.update ? kasa.update.status().catch(() => null) : null]);
   const b = st.backup;
   const reopen = () => openSettingsSheet();
+  const shareRows = await shareSection((title, sub, ...side) => h('div', { class: 'setting' },
+    h('div', { class: 'body' }, h('div', { class: 'title' }, title), sub && h('div', { class: 'sub' }, sub)), ...side));
   const toggle = (checked, onchange) => {
     const i = h('input', { type: 'checkbox', class: 'switch', onchange: (e) => onchange(e.target.checked) });
     i.checked = checked;
@@ -71,6 +73,8 @@ async function openSettingsSheet() {
       _t('Yedekler şifrelidir, OneDrive’da durmaları güvenlidir. Geri yüklemek için kilit ekranındaki “Yedekten geri yükle”yi kullan.')),
 
     ...syncSection(sy, row, toggle, reopen),
+
+    ...shareRows,
 
     section(_t('Verileri taşı')),
     ...importRow(row),

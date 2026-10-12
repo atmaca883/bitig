@@ -174,11 +174,18 @@ function openEditor(type, item = null, extra = {}) {
   $('#sheetTitle').textContent = def.titles[isNew ? 0 : 1];
   $('#sheet').classList.remove('custom');
   $('#sheetDelete').hidden = isNew;
+  $('#sheetSave').hidden = false;
   const form = $('#sheetForm');
   form.replaceChildren(...def.fields.map((f) => buildField(f, draft[f.k])));
   if (type === 'note') attachChecklist(form);
   if (type === 'password' && !isNew) form.querySelector('[data-k="password"]')?.closest('label').after(passwordHistory(draft) || '');
   addExtrasRow(form, draft);
+  if (readOnlyShared(draft)) {
+    // Ortak alanda yalnızca görüntüleme izni: kaydet/sil yok
+    $('#sheetSave').hidden = true;
+    $('#sheetDelete').hidden = true;
+    form.prepend(h('p', { class: 'muted small readonly-note' }, _t('👥 Bu ortak kayıtta yalnızca görüntüleme iznin var.')));
+  }
   if (!isNew) form.append(stampDetails(type, draft));
   $('#sheet').hidden = false;
   form.querySelector('input, textarea')?.focus();
@@ -349,7 +356,13 @@ function stampDetails(type, x) {
     type === 'task' && x.done && [_t('Tamamlandı'), x.completedAt],
     type === 'project' && [_t('Son hareket'), projectActivity(x)],
   ].filter(Boolean);
+  // Ortak kayıtta kim oluşturdu / kim değiştirdi
+  const people = x.spaceId ? [
+    [_t('Oluşturan'), personName(x.spaceId, x.createdBy)],
+    x.updatedBy && [_t('Son değiştiren'), personName(x.spaceId, x.updatedBy)],
+  ].filter((r) => r && r[1]) : [];
   return h('div', { class: 'stamps' },
+    ...people.map(([label, name]) => h('div', null, h('span', null, label), h('b', null, '👤 ' + name))),
     ...rows.map(([label, ms]) => h('div', null, h('span', null, label), h('b', null, ms ? fmtFull(ms) : _t('bu özellikten önce eklendi')))));
 }
 
@@ -422,7 +435,7 @@ async function checkDuplicates(type, item, values, isNew) {
 }
 
 async function saveEditor() {
-  if (!editing) return;
+  if (!editing || readOnlyShared(editing.item)) return;
   const { type, item, isNew } = editing;
   const form = $('#sheetForm');
   const values = {};

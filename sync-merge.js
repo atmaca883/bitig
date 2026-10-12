@@ -44,7 +44,8 @@
           if (!prev || stamp(x) > stamp(prev)) map.set(x.id, x);
         }
       }
-      out[c] = [...map.values()].filter((x) => !(tomb[`${c}:${x.id}`] >= stamp(x)));
+      // Ortak alandaki kayıtların (spaceId) silinmesini paylaşım eşitlemesi yönetir; kişisel mezar taşı onlara dokunmaz
+      out[c] = [...map.values()].filter((x) => x.spaceId || !(tomb[`${c}:${x.id}`] >= stamp(x)));
     }
 
     // Çöpteki bir kayıt başka cihazda düzenlenip geri geldiyse çöpteki kopyası kalkar

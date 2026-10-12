@@ -3,6 +3,7 @@
 
 // ---------- kilit ----------
 async function showLock(msg = '') {
+  stopShareSync();
   db = null;
   editing = null;
   vaultExists = await kasa.vaultExists();
@@ -81,6 +82,8 @@ $('#lockForm').addEventListener('submit', async (e) => {
 function acceptVault(res) {
   db = res.data;
   for (const k of ['projects', 'passwords', 'notes', 'tasks', 'trash']) db[k] ||= [];
+  attachShared(); // ortak alanların bu cihazdaki şifreli önbelleği
+  startShareSync();
   if (purgeTrash()) persist(); // 30 günü geçenler kalıcı silinir
   showMain();
   if (res.recoveryKey) {
@@ -235,6 +238,7 @@ let pinBuffer = '';
 let pinBusy = false;
 
 function clearSession() {
+  stopShareSync();
   db = null;
   editing = null;
   $('#mainView').hidden = true;

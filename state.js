@@ -164,7 +164,12 @@ async function flush() {
   if (!saveTimer || !db) return;
   clearTimeout(saveTimer);
   saveTimer = null;
-  try { await kasa.save(db); } catch (e) { toast(_t('Kaydedilemedi: ') + cleanErr(e)); }
+  try {
+    normalizeSpaces();
+    snapshotShared();
+    await kasa.save(personalCopy(db)); // ortak alan kayıtları kişisel kasaya ve kişisel buluta girmez
+    scheduleSharePush();
+  } catch (e) { toast(_t('Kaydedilemedi: ') + cleanErr(e)); }
 }
 
 function pushReminders() {

@@ -5,13 +5,21 @@
 const stop = (fn) => (e) => { e.stopPropagation(); fn(); };
 // Fareyle satırın üstüne gelince görünen sil düğmesi (kayıt çöp kutusuna gider, "Geri al" ile döner)
 // Yıldız: yıldızlıysa hep görünür, değilse fareyle üstüne gelince (telefonda soluk)
-const starBtn = (item) => h('button', {
+const starBtn = (item) => !readOnlyShared(item) && h('button', {
   class: 'mini star-btn' + (item.starred ? ' on' : ''), title: item.starred ? _t('Yıldızı kaldır') : _t('Yıldızla (üstte tut)'),
   onclick: stop(() => { toggleStar(item); persist(); render(); }),
 }, item.starred ? '★' : '☆');
-const delBtn = (type, item) => h('button', { class: 'mini del-btn', title: _t('Çöp kutusuna taşı'), onclick: stop(() => moveToTrash(type, item)) }, '🗑');
+const delBtn = (type, item) => !readOnlyShared(item) && h('button', { class: 'mini del-btn', title: _t('Çöp kutusuna taşı'), onclick: stop(() => moveToTrash(type, item)) }, '🗑');
 
 // Etiket çipleri: tıklayınca o etiketle süzülür (seçiliyse süzgeç kalkar)
+// Ortak alandaki kayıt: 👥 + alan adı
+const sharedChip = (x) => {
+  if (!x.spaceId) return null;
+  const by = personName(x.spaceId, x.createdBy);
+  const edited = x.updatedBy && x.updatedBy !== x.createdBy ? personName(x.spaceId, x.updatedBy) : '';
+  const title = [_t('Ortak alan: {0}', spaceName(x.spaceId)), by && _t('Oluşturan: {0}', by), edited && _t('Son değiştiren: {0}', edited)].filter(Boolean).join('\n');
+  return h('span', { class: 'chip shared', title }, '👥 ' + spaceName(x.spaceId) + (by ? ' · ' + by : ''));
+};
 const attachChip = (x) => (x.files?.length ? h('span', { class: 'chip', title: x.files.map((f) => f.name).join('\n') }, '📎 ' + x.files.length) : null);
 
 function tagChips(item) {
@@ -25,7 +33,7 @@ function tagChips(item) {
 function taskRow(t, { hideProject = false } = {}) {
   return h('div', { class: 'item t-task' + (t.done ? ' done' : ''), onclick: () => openEditor('task', t) },
     h('button', {
-      class: 'check', title: t.done ? _t('Geri al') : _t('Tamamla'),
+      class: 'check', title: t.done ? _t('Geri al') : _t('Tamamla'), disabled: readOnlyShared(t),
       onclick: (e) => {
         e.stopPropagation();
         const r = completeTask(t);
@@ -43,7 +51,7 @@ function taskRow(t, { hideProject = false } = {}) {
         !t.done && dueChip(t.due),
         !t.done && t.remindAt && h('span', { class: 'chip' }, '⏰ ' + fmtDateTime(t.remindAt)),
         t.repeat && h('span', { class: 'chip', title: _t('Tekrarlayan görev') }, '🔁 ' + (REPEAT_LABELS()[t.repeat] || '')),
-        attachChip(t), ...tagChips(t),
+        sharedChip(t), attachChip(t), ...tagChips(t),
         t.done ? stampChip(t, t.completedAt || t.updated, '✓ ') : stampChip(t),
         !hideProject && projectChip(t.projectId))),
     h('div', { class: 'side' }, starBtn(t), delBtn('task', t)),
@@ -68,7 +76,7 @@ function passwordRow(p, { hideProject = false } = {}) {
     h('div', { class: 'body' },
       h('div', { class: 'title' }, p.title),
       h('div', { class: 'sub' }, p.username || p.url || '—'),
-      h('div', { class: 'chips' }, totpChip(p), ...healthChips(p), attachChip(p), ...tagChips(p), stampChip(p), !hideProject && projectChip(p.projectId))),
+      h('div', { class: 'chips' }, totpChip(p), ...healthChips(p), sharedChip(p), attachChip(p), ...tagChips(p), stampChip(p), !hideProject && projectChip(p.projectId))),
     h('div', { class: 'side' },
       p.username && h('button', { class: 'mini', title: _t('Kullanıcı adını kopyala'),
         onclick: stop(() => { kasa.copy(p.username); toast(_t('Kullanıcı adı kopyalandı')); }) }, '@'),
@@ -90,7 +98,7 @@ function noteRow(n, { hideProject = false } = {}) {
       h('div', { class: 'sub' }, first),
       h('div', { class: 'chips' },
         pr.total && h('span', { class: 'chip' + (pr.done === pr.total ? ' ok' : '') }, `☑ ${pr.done}/${pr.total}`),
-        attachChip(n), ...tagChips(n),
+        sharedChip(n), attachChip(n), ...tagChips(n),
         stampChip(n),
         !hideProject && projectChip(n.projectId))),
     h('div', { class: 'side' }, starBtn(n), delBtn('note', n)),
@@ -106,7 +114,7 @@ function projectRow(p) {
     h('div', { class: 'body' },
       h('div', { class: 'title' }, p.name),
       h('div', { class: 'sub' }, _t("{0} açık görev · {1} not · {2} şifre", tasks, notes, pws)),
-      h('div', { class: 'chips' }, stampChip(p, projectActivity(p), '🕒 Son hareket: '))),
+      h('div', { class: 'chips' }, sharedChip(p), stampChip(p, projectActivity(p), '🕒 Son hareket: '))),
     h('div', { class: 'side' }, delBtn('project', p), h('span', { class: 'muted' }, '›')),
   );
 }

@@ -1,6 +1,7 @@
 self.KASA_CONFIG = {
-  "version": "202610111455",
+  "version": "202610120847",
   "dropbox": "mkzj311uhxckdz5",
   "onedrive": "453d1279-b48b-43bd-87e0-b4224e7aa2ac",
-  "onedriveTenant": "common"
+  "onedriveTenant": "common",
+  "shareServer": "https://bitig-sunucu.bitig-sunucu.workers.dev"
 };

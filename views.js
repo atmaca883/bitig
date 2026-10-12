@@ -81,6 +81,8 @@ const VIEWS = {
       h('button', { class: 'icon-btn', title: _t('Projelere dön'), onclick: () => { openProjectId = null; render(); } }, '←'),
       h('span', { class: 'dot', style: `width:12px;height:12px;background:${COLORS[p.color] || COLORS.gray}` }),
       h('h3', null, p.name),
+      shareAvailableCache && h('button', { class: 'mini', title: p.spaceId ? _t('Birini daha davet et') : _t('Bu projeyi paylaş'),
+        onclick: () => shareProject(p).catch((e) => toast(cleanErr(e))) }, p.spaceId ? _t('👥 Davet et') : _t('👥 Paylaş')),
       h('button', { class: 'mini', onclick: () => openEditor('project', p) }, _t('Düzenle'))));
     c.append(h('div', { class: 'chips project-stamps' },
       p.created && h('span', { class: 'chip stamp', title: stampTitle(p) }, _t('📅 Oluşturuldu: ') + fmtStamp(p.created)),

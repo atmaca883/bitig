@@ -625,6 +625,16 @@ select.compact { width: auto; padding: 5px 8px; }
 .attach-open small { color: var(--muted); font-size: 11px; flex: none; }
 .attach-preview { display: block; max-width: 100%; max-height: 60vh; margin: 8px auto 4px; border-radius: 8px; object-fit: contain; }
 
+/* ortak alanlar */
+.chip.shared { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.invite-link { width: 100%; margin: 6px 0 2px; font-size: 12px; }
+.member-list { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px; max-height: 50vh; overflow-y: auto; }
+.member-row { display: flex; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.member-row .body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.member-row b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.member-row small { color: var(--muted); font-size: 11.5px; }
+.readonly-note { margin: 0 0 8px; }
+
 /* etiketler */
 .chip.tag { cursor: pointer; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .chip.tag:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }

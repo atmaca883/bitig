@@ -26,6 +26,8 @@
     const add = (x) => { for (const f of x?.files || []) if (validId(f.id)) ids.add(f.id); };
     for (const k of ['passwords', 'notes', 'tasks']) for (const x of data?.[k] || []) add(x);
     for (const e of data?.trash || []) add(e.item);
+    // Ortak alan önbelleğindeki kayıtlar (kişisel listelerde durmazlar ama ekleri bu cihazda saklıdır)
+    for (const sp of Object.values(data?.share?.spaces || {})) for (const rec of Object.values(sp?.items || {})) add(rec?.data);
     return ids;
   }
 
