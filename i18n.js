@@ -363,6 +363,8 @@
     'Davet et': 'Invite', 'Sana gönderilen bağlantıyla bir alana katıl': 'Join a space with a link you received', 'Bağlantı yapıştır': 'Paste link',
     'Birini daha davet et': 'Invite someone else', 'Bu projeyi paylaş': 'Share this project', '👥 Davet et': '👥 Invite', '👥 Paylaş': '👥 Share',
     'Oluşturan': 'Created by', 'Son değiştiren': 'Last changed by', 'Oluşturan: {0}': 'Created by {0}', 'Son değiştiren: {0}': 'Last changed by {0}',
+    'Bitig uygulamasına dönülüyor…': 'Returning to the Bitig app…', 'Bitig’e dön': 'Back to Bitig', 'Giriş yarıda kaldı; tekrar dene.': 'Sign-in was interrupted; try again.', 'Giriş tamamlanmadı.': 'Sign-in was not completed.',
+    'Yüz tanıma': 'Face unlock', 'Bitig’i aç': 'Unlock Bitig', 'Bu kayıt yalnızca telefon uygulamasında açılır.': 'This record only opens in the phone app.', '{0} kaydı değişti (yeni yüz ya da parmak izi eklendi). Ana şifrenle aç, sonra Ayarlar’dan {0} ile açmayı yeniden kur.': '{0} changed (a new face or fingerprint was added). Unlock with your master password, then set up {0} unlock again in Settings.',
     '👥 Bu ortak kayıtta yalnızca görüntüleme iznin var.': '👥 You can only view this shared entry.',
     '👥 {0}: {1} değişiklik geldi': ['👥 {0}: {1} change arrived', '👥 {0}: {1} changes arrived', 1],
     '{0} çıkarılsın mı?': 'Remove {0}?',

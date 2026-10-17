@@ -54,6 +54,9 @@
   // ---------- doğrudan bağlanılan bulutlar (Uygulamalar/Bitig klasörü) ----------
   const cfg = () => root.KASA_CONFIG || {};
   const here = () => location.origin + location.pathname.replace(/index\.html$/, '');
+  // Telefon uygulamasında giriş telefonun tarayıcısında yapılır ve buluta kayıtlı site adresine döner (oradan uygulamaya)
+  const native = () => root.KasaNative?.isNative;
+  const returnUri = () => (native() ? root.KasaNative.RETURN : here());
 
   // lib: KasaDropbox / KasaOneDrive (aynı arayüz). tag: yerel kayıt anahtarlarındaki kısa ad.
   // renewAfterMs: telefonda yenileme anahtarı kısa ömürlüyse (OneDrive: 24 saat) açılışta sessizce yenile.
@@ -78,20 +81,32 @@
       // silent: kullanıcıya bir şey sormadan oturumu tazele (olmazsa sessizce vazgeçilir)
       async connect({ silent = false } = {}) {
         const p = await lib().pkce();
-        sessionStorage.setItem(`kasa.${tag}`, JSON.stringify({ verifier: p.verifier, state: p.state, redirect: here(), silent }));
-        location.assign(lib().authUrl({
-          clientId: clientId(), redirectUri: here(), challenge: p.challenge, state: p.state, endpoints: endpoints(),
+        const state = (native() ? root.KasaNative.APP_STATE : '') + p.state;
+        // Uygulamada localStorage: Android uygulamayı giriş sırasında kapatsa da kayıt kalır
+        (native() ? localStorage : sessionStorage).setItem(`kasa.${tag}`, JSON.stringify({ verifier: p.verifier, state, redirect: returnUri(), silent }));
+        const url = lib().authUrl({
+          clientId: clientId(), redirectUri: returnUri(), challenge: p.challenge, state, endpoints: endpoints(),
           ...(silent ? { prompt: 'none', loginHint: localStorage.getItem(ls('email')) || undefined } : {}),
-        }));
+        });
+        if (native()) return this.complete(await root.KasaNative.authorize(url));
+        location.assign(url);
         return new Promise(() => {}); // sayfa buluta gidiyor
       },
       // Dönen sonuç: false (yönlendirme yok) ya da { done, silent }
       async finishRedirect() {
+        if (native()) { // uygulama giriş sırasında kapanıp dönüş bağlantısıyla yeniden açıldıysa
+          const q = await root.KasaNative.launchAuth();
+          return q && localStorage.getItem(`kasa.${tag}`) ? this.complete(q) : false;
+        }
         const q = new URLSearchParams(location.search);
         if (!q.has('code') && !q.has('error')) return false;
-        const saved = JSON.parse(sessionStorage.getItem(`kasa.${tag}`) || 'null');
-        sessionStorage.removeItem(`kasa.${tag}`);
         history.replaceState(null, '', here()); // adres çubuğunda kod kalmasın
+        return this.complete(q);
+      },
+      async complete(q) {
+        const store = native() ? localStorage : sessionStorage;
+        const saved = JSON.parse(store.getItem(`kasa.${tag}`) || 'null');
+        store.removeItem(`kasa.${tag}`);
         if (q.has('error')) {
           if (saved?.silent) return { done: false, silent: true }; // sessiz yenileme olmadı; gerekirse "Yeniden bağlan" çıkar
           throw new Error(q.get('error_description') || _t('{0} izni verilmedi.', label));

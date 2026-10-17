@@ -3,6 +3,8 @@
 // Kasanın veri anahtarı (DEK) bu sırdan türetilen anahtarla şifrelenip yalnızca bu telefonda saklanır.
 // Böylece "Face ID" sadece bir kapı değildir: onay olmadan anahtar çözülemez. Uygulama kapanıp açılsa da çalışır.
 // Sunucu yoktur; imza doğrulamaya gerek yok, güvenlik PRF sırrının kendisindedir.
+// Telefon uygulamasında (Android/iPhone) aynı iş uygulamanın kendi eklentisiyle (BitigBio) yapılır: 32 baytlık sır
+// Android Keystore'da / iPhone Keychain'de biyometrik onaya bağlı saklanır; yeni yüz/parmak izi eklenince geçersiz olur.
 (function (root) {
   'use strict';
 
@@ -12,7 +14,20 @@
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
   const isAndroid = /Android/.test(ua);
 
-  const label = () => (isIOS ? 'Face ID' : isAndroid ? _t('Parmak izi') : _t('Cihaz kilidi'));
+  const native = () => !!root.KasaNative?.isNative;
+  const NB = () => root.Capacitor.Plugins.BitigBio;
+  let nativeType = ''; // 'face' | 'touch' | 'fingerprint'
+  if (native()) NB().status().then((s) => { nativeType = s.type || ''; }).catch(() => {});
+
+  const label = () => {
+    if (native()) {
+      const ios = root.KasaNative.platform === 'ios';
+      if (nativeType === 'touch') return 'Touch ID';
+      if (nativeType === 'face') return ios ? 'Face ID' : _t('Yüz tanıma');
+      return ios ? 'Face ID' : _t('Parmak izi');
+    }
+    return isIOS ? 'Face ID' : isAndroid ? _t('Parmak izi') : _t('Cihaz kilidi');
+  };
 
   class Cancelled extends Error {
     constructor() { super(_t('{0} onayı verilmedi.', label())); this.cancelled = true; }
@@ -21,8 +36,20 @@
   const b64url = (u8) => C.b64(u8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const unb64url = (s) => C.unb64(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4));
 
+  // Uygulama eklentisi çağrısı: hata kodlarını kullanıcıya anlaşılır hatalara çevir
+  async function nativeCall(fn) {
+    try { return await fn(); } catch (e) {
+      if (e?.code === 'cancelled') throw new Cancelled();
+      if (e?.code === 'invalidated') throw new Error(_t('{0} kaydı değişti (yeni yüz ya da parmak izi eklendi). Ana şifrenle aç, sonra Ayarlar’dan {0} ile açmayı yeniden kur.', label()));
+      throw e;
+    }
+  }
+
   // Bu cihaz biyometrik geçiş anahtarını ve PRF'yi destekliyor mu? (kesin cevap için kurulumda denenir)
   async function supported() {
+    if (native()) {
+      try { const s = await NB().status(); nativeType = s.type || ''; return !!s.available; } catch { return false; }
+    }
     try {
       if (!root.PublicKeyCredential || !navigator.credentials?.create) return false;
       if (!(await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable())) return false;
@@ -68,6 +95,11 @@
 
   // Kurulum 1: geçiş anahtarı oluştur (dokunuşla çağrılmalı). Sır oluştururken geldiyse onu da döndürür.
   async function create(deviceName) {
+    if (native()) { // sır burada üretilir, eklenti onu onaya bağlı saklar
+      const prf = C.random(32);
+      const r = await nativeCall(() => NB().protect({ secret: C.b64(prf), title: 'Bitig', cancel: _t('Vazgeç') }));
+      return { native: true, enc: r.enc, prf };
+    }
     const salt = C.random(32);
     let cred;
     try {
@@ -101,12 +133,18 @@
   // Kurulum 3: DEK'i sırdan türetilen anahtarla sarmala → bu telefonda saklanacak kayıt
   async function seal(dek, pending, prf) {
     const box = await C.seal(await wrapKeyFrom(prf), dek);
+    if (pending.native) return { v: 2, native: true, enc: pending.enc, box, created: Date.now() };
     return { v: 1, credId: b64url(pending.credId), salt: b64url(pending.salt), box, created: Date.now() };
   }
 
   // Açma: onay al, sırrı üret, DEK'i çöz
   async function open(rec) {
-    const prf = await getPrf(unb64url(rec.credId), unb64url(rec.salt));
+    let prf;
+    if (rec.native) {
+      if (!native()) throw new Error(_t('Bu kayıt yalnızca telefon uygulamasında açılır.'));
+      const r = await nativeCall(() => NB().reveal({ enc: rec.enc, title: 'Bitig', reason: _t('Bitig’i aç'), cancel: _t('Vazgeç') }));
+      prf = C.unb64(r.secret);
+    } else prf = await getPrf(unb64url(rec.credId), unb64url(rec.salt));
     try {
       return await C.open(await wrapKeyFrom(prf), rec.box);
     } catch {
@@ -114,5 +152,8 @@
     }
   }
 
-  root.KasaBio = { label, supported, create, prfFor, seal, open, isIOS, isAndroid };
+  // Kapatınca: uygulamadaki saklı sırrı da sil
+  const forget = () => (native() ? NB().forget().catch(() => {}) : Promise.resolve());
+
+  root.KasaBio = { label, supported, create, prfFor, seal, open, forget, isIOS, isAndroid };
 })(self);

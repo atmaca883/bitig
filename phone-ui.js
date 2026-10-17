@@ -14,6 +14,8 @@ window.showLock = async function (msg = '') {
   // Bulutun izin sayfasından dönüldüyse önce oturumu tamamla
   if (!redirectChecked) {
     redirectChecked = true;
+    // Telefon uygulamasından başlatılan bulut girişi bu siteye döndüyse: uygulamaya geri gönder
+    if (KasaNative.bounceToApp()) return;
     const r = await kasa.phone.finishRedirect();
     if (r.error) msg = r.error;
     else if (r.done && !r.silent && await kasa.vaultExists()) msg = msg || _t('Bulut bağlantısı yenilendi. Ana şifrenle aç.');
@@ -66,7 +68,7 @@ function setupShell(...children) {
 }
 
 // Ana ekrandan mı açıldı? (iPhone'da Safari ile ana ekrandaki uygulama ayrı hafıza kullanır: kurulum orada yapılmalı)
-const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isStandalone = () => KasaNative.isNative || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const UA = navigator.userAgent;
 const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
 const isAndroid = /Android/.test(UA);
@@ -360,6 +362,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ---------- çevrimdışı çalışma (servis çalışanı) ----------
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
+// (telefon uygulamasında dosyalar zaten uygulamanın içinde: gerekmez)
+if ('serviceWorker' in navigator && location.protocol === 'https:' && !KasaNative.isNative) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

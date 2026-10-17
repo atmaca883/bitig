@@ -405,6 +405,7 @@
       async disable() {
         await Store.del('bio');
         S.bioRec = null;
+        await root.KasaBio.forget();
         return true;
       },
       // Dokunuşun içinde çağrılır: kayıt bellekte olduğu için Face ID isteği hemen gider
@@ -480,6 +481,8 @@
     },
     // Yazdır: görünmez bir çerçevede tarayıcının yazdırma penceresi (iPhone'da paylaş → yazdır / PDF)
     async printHtml(html) {
+      // Uygulamada yazdırma penceresi yok: sayfa Paylaş menüsüyle açılır (Yazdır / PDF olarak kaydet / Dosyalar)
+      if (root.KasaNative?.isNative) { await root.KasaNative.shareFile('Bitig.html', String(html)); return true; }
       const f = document.createElement('iframe');
       f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
       f.srcdoc = String(html);
@@ -530,6 +533,7 @@
       },
       async save(id, name) {
         const bytes = await root.kasa.files.read(id);
+        if (root.KasaNative?.isNative) return root.KasaNative.shareFile(A.cleanName(name), bytes);
         const url = URL.createObjectURL(new Blob([bytes]));
         const a = document.createElement('a');
         a.href = url;
@@ -549,6 +553,7 @@
     },
     verifyPassword: async (password) => { await verifyPassword(password); return true; },
     async exportSave(name, text, type = 'text/plain') {
+      if (root.KasaNative?.isNative) return root.KasaNative.shareFile(name, String(text));
       const url = URL.createObjectURL(new Blob([text], { type: type + ';charset=utf-8' }));
       const a = document.createElement('a');
       a.href = url;
@@ -616,6 +621,7 @@
       return { protected: false };
     },
     async openUrl(url) {
+      if (root.KasaNative?.isNative) { try { await root.KasaNative.openUrl(/^https?:\/\//i.test(url) ? url : 'https://' + url); } catch {} return; }
       try { window.open(/^https?:\/\//i.test(url) ? url : 'https://' + url, '_blank', 'noopener'); } catch {}
     },
     setReminders: () => {},
@@ -684,6 +690,8 @@
       renewDriveIfNeeded() {
         const d = drive();
         if (!d?.needsRenew?.()) return false;
+        // Uygulamada sayfa yerinde kalır: yenileme kısa bir giriş penceresinde arka planda olur
+        if (root.KasaNative?.isNative) { d.renew().catch(() => {}); return false; }
         d.renew();
         return true;
       },
@@ -695,6 +703,7 @@
         clearSession();
         await Store.clear();
         S.bioRec = null;
+        await root.KasaBio.forget();
         await drive()?.disconnect?.();
         localStorage.removeItem(SETTINGS_KEY);
         settings = loadSettings();
